@@ -62,6 +62,7 @@ declare module 'growatt' {
       [key: string]: unknown;
     };
     historyLast?: Record<string, unknown>;
+    historyAll?: Record<string, unknown>[];
     deviceData?: {
       deviceModel?: string;
       sn?: string;

@@ -1,7 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Growatt from 'growatt';
-import type { GrowattPlantInfo, GrowattInverterData } from './growatt.types';
+import type {
+  GrowattPlantInfo,
+  GrowattInverterData,
+  HistoryRecord,
+} from './growatt.types';
 
 @Injectable()
 export class GrowattService {
@@ -67,6 +71,64 @@ export class GrowattService {
       this.loggedIn = false;
       this.logger.log('Growatt session closed');
     }
+  }
+
+  /**
+   * Fetch historical data from Growatt API (paginated, 80 records per page).
+   * Handles calendar values as both ISO strings and Unix timestamps (seconds).
+   */
+  async getHistoricalData(
+    startDate: Date,
+    endDate: Date,
+  ): Promise<HistoryRecord[]> {
+    await this.ensureSession();
+
+    const allRecords: HistoryRecord[] = [];
+    let page = 0;
+    const maxPages = 50; // safety limit
+
+    while (page < maxPages) {
+      const raw = await this.growatt.getAllPlantData({
+        plantData: false,
+        deviceData: false,
+        weather: false,
+        statusData: false,
+        totalData: false,
+        historyAll: true,
+        historyLastStartDate: startDate,
+        historyLastEndDate: endDate,
+        historyStart: page,
+      });
+
+      const plantIds = Object.keys(raw);
+      if (plantIds.length === 0) break;
+
+      // Use configured plant or first
+      const configuredId = this.configService.get<string>('GROWATT_PLANT_ID');
+      const plantId =
+        configuredId && raw[configuredId] ? configuredId : plantIds[0]!;
+      const plant = raw[plantId];
+      if (!plant?.devices) break;
+
+      const deviceIds = Object.keys(plant.devices);
+      if (deviceIds.length === 0) break;
+
+      const device = plant.devices[deviceIds[0]!]!;
+      const history = (device.historyAll ?? []) as HistoryRecord[];
+
+      if (history.length === 0) break;
+
+      allRecords.push(...history);
+      this.logger.debug(`History page ${page}: ${history.length} records`);
+
+      if (history.length < 80) break; // last page
+      page++;
+
+      // Rate limit: wait 1 second between pages
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+
+    return allRecords;
   }
 
   // ---------------------------------------------------------------------------

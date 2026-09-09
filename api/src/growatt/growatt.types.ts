@@ -42,3 +42,13 @@ export interface GrowattInverterData {
 
   recordedAt: Date;
 }
+
+export interface HistoryRecord {
+  calendar: string | number; // ISO string or Unix timestamp (seconds)
+  ppv?: number; // PV power (W)
+  capacity?: number; // Battery SOC (%)
+  pBat?: number; // Battery power (W, negative=charging, positive=discharging)
+  outPutPower?: number; // Load power (W)
+  epvToday?: number; // Daily yield (kWh)
+  [key: string]: unknown;
+}

@@ -11,7 +11,7 @@ export class Reading {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Index()
+  @Index({ unique: true })
   @Column({ type: 'timestamptz' })
   recorded_at!: Date;
 

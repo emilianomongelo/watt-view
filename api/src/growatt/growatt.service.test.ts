@@ -205,4 +205,128 @@ describe('GrowattService', () => {
     expect(mockInstance.login).not.toHaveBeenCalled();
     expect(mockInstance.logout).not.toHaveBeenCalled();
   });
+
+  it('getHistoricalData returns paginated history records', async () => {
+    const historyRecords = [
+      {
+        calendar: '2025-01-15T10:00:00Z',
+        ppv: 450,
+        capacity: 65,
+        pBat: -200,
+        outPutPower: 180,
+        epvToday: 2.5,
+      },
+      {
+        calendar: '2025-01-15T10:05:00Z',
+        ppv: 460,
+        capacity: 66,
+        pBat: -210,
+        outPutPower: 175,
+        epvToday: 2.6,
+      },
+    ];
+
+    // First page returns 2 records (< 80 = last page)
+    mockInstance.getAllPlantData.mockResolvedValueOnce({
+      '11099129': {
+        devices: {
+          KCM7G34043: { historyAll: historyRecords },
+        },
+      },
+    });
+
+    const result = await service.getHistoricalData(
+      new Date('2025-01-15'),
+      new Date('2025-01-16'),
+    );
+
+    expect(result).toHaveLength(2);
+    expect(result[0]!.calendar).toBe('2025-01-15T10:00:00Z');
+    expect(result[0]!.ppv).toBe(450);
+    expect(result[1]!.capacity).toBe(66);
+  });
+
+  it('getHistoricalData handles Unix timestamp calendar values', async () => {
+    const historyRecords = [
+      {
+        calendar: 1736935200, // Unix timestamp in seconds
+        ppv: 300,
+        capacity: 50,
+      },
+    ];
+
+    mockInstance.getAllPlantData.mockResolvedValueOnce({
+      '11099129': {
+        devices: {
+          KCM7G34043: { historyAll: historyRecords },
+        },
+      },
+    });
+
+    const result = await service.getHistoricalData(
+      new Date('2025-01-15'),
+      new Date('2025-01-16'),
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0]!.calendar).toBe(1736935200);
+  });
+
+  it('getHistoricalData returns empty array when no plants', async () => {
+    mockInstance.getAllPlantData.mockResolvedValueOnce({});
+
+    const result = await service.getHistoricalData(
+      new Date('2025-01-15'),
+      new Date('2025-01-16'),
+    );
+
+    expect(result).toEqual([]);
+  });
+
+  it('getHistoricalData returns empty array when no devices', async () => {
+    mockInstance.getAllPlantData.mockResolvedValueOnce({
+      '11099129': { devices: {} },
+    });
+
+    const result = await service.getHistoricalData(
+      new Date('2025-01-15'),
+      new Date('2025-01-16'),
+    );
+
+    expect(result).toEqual([]);
+  });
+
+  it('getHistoricalData stops when historyAll is empty', async () => {
+    mockInstance.getAllPlantData.mockResolvedValueOnce({
+      '11099129': {
+        devices: {
+          KCM7G34043: { historyAll: [] },
+        },
+      },
+    });
+
+    const result = await service.getHistoricalData(
+      new Date('2025-01-15'),
+      new Date('2025-01-16'),
+    );
+
+    expect(result).toEqual([]);
+  });
+
+  it('getHistoricalData stops when historyAll is undefined', async () => {
+    mockInstance.getAllPlantData.mockResolvedValueOnce({
+      '11099129': {
+        devices: {
+          KCM7G34043: {},
+        },
+      },
+    });
+
+    const result = await service.getHistoricalData(
+      new Date('2025-01-15'),
+      new Date('2025-01-16'),
+    );
+
+    expect(result).toEqual([]);
+  });
 });
