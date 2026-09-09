@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+api/dist/
+macos/.build/
+macos/GrowattPlusMenuBar.app/
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Coverage
+coverage/
+
+# MiMoCode internal
+.mimocode/.cron-lock
+.mimocode/scheduled_tasks.json
+.mimocode/package.json
+.mimocode/package-lock.json
+.mimocode/bun.lock
+.mimocode/node_modules/
