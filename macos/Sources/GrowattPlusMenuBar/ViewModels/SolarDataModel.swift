@@ -27,6 +27,15 @@ final class SolarDataModel: ObservableObject {
     private let apiClient = SolarAPIClient()
     private var refreshTimer: Timer?
 
+    // MARK: - Init
+
+    init() {
+        // Start fetching immediately on app launch
+        Task { @MainActor in
+            self.startAutoRefresh()
+        }
+    }
+
     // MARK: - Public API
 
     /// Kick off automatic polling. Call once from the app entry point.
