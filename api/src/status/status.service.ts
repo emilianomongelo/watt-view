@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { GrowattService } from '../growatt/growatt.service';
 import { SolarService } from '../solar/solar.service';
 import { WeatherService } from '../weather/weather.service';
@@ -22,15 +23,16 @@ export class StatusService {
   private readonly startTime = Date.now();
 
   constructor(
+    private readonly configService: ConfigService,
     _growattService: GrowattService,
     private readonly solarService: SolarService,
     private readonly weatherService: WeatherService,
   ) {}
 
   async getStatus(): Promise<SystemStatus> {
-    const lat = parseFloat(process.env.SOLAR_LAT ?? '-34.556960');
-    const lng = parseFloat(process.env.SOLAR_LON ?? '-68.307736');
-    const plantId = process.env.GROWATT_PLANT_ID ?? '';
+    const lat = this.configService.get<number>('SOLAR_LAT') ?? -34.55696;
+    const lng = this.configService.get<number>('SOLAR_LON') ?? -68.30774;
+    const plantId = this.configService.get<string>('GROWATT_PLANT_ID') ?? '';
 
     let solar: SolarDaySummary | null = null;
     let weather: WeatherCurrent | null = null;

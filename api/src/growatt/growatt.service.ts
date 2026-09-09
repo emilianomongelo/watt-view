@@ -78,11 +78,18 @@ export class GrowattService {
     plant: import('growatt').PlantData,
   ): GrowattPlantInfo {
     const pd = plant.plantData ?? {};
+
+    // Prioritize .env coordinates over API (API forces city center, not real location)
+    const envLat = this.configService.get<string>('SOLAR_LAT');
+    const envLng = this.configService.get<string>('SOLAR_LON');
+    const lat = envLat ? parseFloat(envLat) : parseFloat(String(pd.lat ?? '0'));
+    const lng = envLng ? parseFloat(envLng) : parseFloat(String(pd.lng ?? '0'));
+
     return {
       plantId,
       plantName: pd.plantName ?? '',
-      latitude: parseFloat(String(pd.lat ?? '0')),
-      longitude: parseFloat(String(pd.lng ?? '0')),
+      latitude: lat,
+      longitude: lng,
       city: pd.city ?? '',
       country: pd.country ?? '',
       timezone: pd.timezone ?? '',

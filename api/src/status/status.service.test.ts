@@ -6,6 +6,12 @@ describe('StatusService', () => {
 
   beforeEach(() => {
     service = new StatusService(
+      { get: vi.fn((key: string) => {
+        if (key === 'SOLAR_LAT') return -34.556960;
+        if (key === 'SOLAR_LON') return -68.307736;
+        if (key === 'GROWATT_PLANT_ID') return '11099129';
+        return undefined;
+      }) } as never,
       { login: vi.fn(), getPlantList: vi.fn(), getPlantInfo: vi.fn(), getInverterData: vi.fn() } as never,
       {
         getSolarTimes: vi.fn(),
