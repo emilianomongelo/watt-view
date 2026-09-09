@@ -4,7 +4,7 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject private var model: SolarDataModel
 
-    @AppStorage("apiBaseURL") private var apiBaseURL = "http://209.46.125.190:3000/api/status"
+    @AppStorage("apiBaseURL") private var apiBaseURL = "http://209.46.125.190/api/status"
     @AppStorage("apiToken") private var apiToken = "73f42ef8-263b-4fee-9c1e-a55208639f3e"
     @AppStorage("refreshInterval") private var refreshIntervalSeconds: Double = 300
 
@@ -78,7 +78,7 @@ struct SettingsView: View {
                 LabeledContent("Target", value: "macOS 13.0+")
 
                 Button("Reset to Defaults") {
-                    apiBaseURL = "http://209.46.125.190:3000/api/status"
+                    apiBaseURL = "http://209.46.125.190/api/status"
                     apiToken = "73f42ef8-263b-4fee-9c1e-a55208639f3e"
                     refreshIntervalSeconds = 300
                     model.refreshIntervalSeconds = 300

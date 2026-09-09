@@ -5,8 +5,8 @@ struct SolarAPIClient {
     /// Base URL stored in UserDefaults so the user can change it from Settings.
     var baseURL: URL {
         let raw = UserDefaults.standard.string(forKey: "apiBaseURL")
-            ?? "http://209.46.125.190:3000/api/status"
-        return URL(string: raw) ?? URL(string: "http://209.46.125.190:3000/api/status")!
+            ?? "http://209.46.125.190/api/status"
+        return URL(string: raw) ?? URL(string: "http://209.46.125.190/api/status")!
     }
 
     /// API token stored in UserDefaults for Bearer authentication.
