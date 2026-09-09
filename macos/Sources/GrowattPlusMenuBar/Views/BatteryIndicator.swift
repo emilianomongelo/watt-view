@@ -26,11 +26,13 @@ struct BatteryIndicator: View {
     }
 
     /// Charge / discharge indicator text.
+    /// Growatt convention: negative = charging (energy into battery),
+    ///                      positive = discharging (energy out of battery).
     private var powerLabel: String {
-        if power > 0 {
-            return String(format: "+%.0f W charging", power)
-        } else if power < 0 {
-            return String(format: "%.0f W discharging", abs(power))
+        if power < 0 {
+            return String(format: "%.0f W charging", abs(power))
+        } else if power > 0 {
+            return String(format: "%.0f W discharging", power)
         }
         return "idle"
     }
