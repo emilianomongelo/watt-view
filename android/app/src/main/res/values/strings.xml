@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Watt View</string>
+    <string name="widget_name">Watt View</string>
+    <string name="widget_description">Monitor your solar energy system at a glance</string>
+    <string name="battery_label">Battery</string>
+    <string name="pv_label">Solar</string>
+    <string name="load_label">Load</string>
+    <string name="history_label">History</string>
+    <string name="settings_label">Settings</string>
+    <string name="refresh">Refresh</string>
+    <string name="loading">Loading solar data…</string>
+    <string name="error_connection">Connection Error</string>
+    <string name="retry">Retry</string>
+</resources>
