@@ -1,8 +1,8 @@
-# Growatt Plus API
+# Watt View API
 
 ## Overview
 
-Solar energy monitoring system backend. Integrates Growatt inverter API, solar position calculations (suncalc), weather data (Open-Meteo), and optional LLM-powered chat.
+Solar energy monitoring system backend. Integrates Growatt SPF 5000 ES inverter API, solar position calculations (suncalc), weather data (Open-Meteo), and optional LLM-powered chat.
 
 ## Stack
 
@@ -69,5 +69,16 @@ npm run check
 - **TypeORM 1.x** — using DataSource API (not legacy createConnection)
 - **ESM imports** — `import` syntax, compiled to CommonJS by NestJS/tsc
 - **No `.env` reading** — always via ConfigService from @nestjs/config
-- **Solar service** — fully implemented with suncalc (not a stub)
-- **Growatt service** — stubs only, TODO comments for actual API integration
+- **Solar service** — fully implemented with suncalc
+- **Growatt service** — real API integration via `growatt` npm package (SPF 5000 ES)
+- **Coordinates** — .env SOLAR_LAT/SOLAR_LON take priority over Growatt API values
+- **Deployment** — systemd service on VPS, GitHub Actions auto-deploy on push to main
+
+## Deployment
+
+Push to `main` triggers GitHub Actions → SSH to VPS → git pull → npm ci → build → restart systemd service.
+
+- **VPS**: `/home/deploy/watt-view/`
+- **Service**: `watt-view.service` (systemd)
+- **Env file**: `/etc/watt-view/api.env` (managed manually on VPS)
+- **nginx**: reverse proxy on port 3000

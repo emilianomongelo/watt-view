@@ -1,7 +1,7 @@
 {
-  "name": "growatt-plus-api",
+  "name": "watt-view-api",
   "version": "0.1.0",
-  "description": "Solar energy monitoring system — Growatt Plus backend",
+  "description": "Watt View — Solar energy monitoring system backend",
   "private": true,
   "scripts": {
     "build": "nest build",

@@ -1,0 +1,66 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: deploy
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+
+            cd /home/deploy/watt-view
+
+            # Source .env so NestJS build tools have DATABASE_URL etc.
+            # Env file is managed manually on the VPS.
+            set -a; source .env; set +a
+
+            echo "==> Pulling latest changes..."
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "==> Installing dependencies..."
+            cd api
+            npm ci --legacy-peer-deps
+
+            echo "==> Building..."
+            npm run build
+
+            echo "==> Restarting service..."
+            sudo systemctl restart watt-view
+
+            echo "==> Waiting for service to come up..."
+            attempts=20
+            i=1
+            while [ "$i" -le "$attempts" ]; do
+              if sudo systemctl is-active --quiet watt-view; then
+                echo "watt-view is active"
+                break
+              fi
+              echo "watt-view not active yet (attempt $i/$attempts)"
+              sleep 3
+              i=$((i + 1))
+            done
+
+            if ! sudo systemctl is-active --quiet watt-view; then
+              echo "ERROR: watt-view failed to become active"
+              sudo systemctl status watt-view --no-pager -l || true
+              sudo journalctl -u watt-view --no-pager -n 30 || true
+              exit 1
+            fi
+
+            echo "==> Deployment complete!"

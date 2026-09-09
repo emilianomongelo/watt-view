@@ -1,0 +1,18 @@
+[Unit]
+Description=Watt View API (NestJS)
+After=network.target postgresql-17.service
+
+[Service]
+Type=simple
+User=deploy
+Group=deploy
+WorkingDirectory=/home/deploy/watt-view/api
+EnvironmentFile=/etc/watt-view/api.env
+ExecStart=/usr/bin/node /home/deploy/watt-view/api/dist/main.js
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
