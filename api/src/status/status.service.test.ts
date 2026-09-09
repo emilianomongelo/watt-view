@@ -12,7 +12,7 @@ describe('StatusService', () => {
         if (key === 'GROWATT_PLANT_ID') return '11099129';
         return undefined;
       }) } as never,
-      { login: vi.fn(), getPlantList: vi.fn(), getPlantInfo: vi.fn(), getInverterData: vi.fn() } as never,
+      { getPlantData: vi.fn().mockRejectedValue(new Error('no connection')), login: vi.fn(), logout: vi.fn() } as never,
       {
         getSolarTimes: vi.fn(),
         getPosition: vi.fn(),
@@ -53,7 +53,8 @@ describe('StatusService', () => {
     expect(status.solar?.date).toBe('2025-06-21');
     expect(status.weather).toBeDefined();
     expect(status.weather?.temperature).toBe(20);
-    expect(status.growatt.status).toBe('stub');
+    expect(status.growatt.status).toBe('error');
+    expect(status.growatt.inverterData).toBeNull();
     expect(typeof status.uptime).toBe('number');
   });
 });

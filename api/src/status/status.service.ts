@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GrowattService } from '../growatt/growatt.service';
+import type { GrowattInverterData } from '../growatt/growatt.types';
 import { SolarService } from '../solar/solar.service';
 import { WeatherService } from '../weather/weather.service';
 import type { SolarDaySummary } from '../solar/solar.types';
@@ -13,6 +14,7 @@ export interface SystemStatus {
   growatt: {
     plantId: string;
     status: string;
+    inverterData: GrowattInverterData | null;
   };
   uptime: number;
 }
@@ -24,7 +26,7 @@ export class StatusService {
 
   constructor(
     private readonly configService: ConfigService,
-    _growattService: GrowattService,
+    private readonly growattService: GrowattService,
     private readonly solarService: SolarService,
     private readonly weatherService: WeatherService,
   ) {}
@@ -36,6 +38,7 @@ export class StatusService {
 
     let solar: SolarDaySummary | null = null;
     let weather: WeatherCurrent | null = null;
+    let inverterData: GrowattInverterData | null = null;
 
     try {
       solar = this.solarService.getDaySummary(lat, lng, new Date());
@@ -49,13 +52,21 @@ export class StatusService {
       this.logger.warn('Failed to get weather data', error);
     }
 
+    try {
+      const result = await this.growattService.getPlantData();
+      inverterData = result.inverterData;
+    } catch (error) {
+      this.logger.warn('Failed to get Growatt data', error);
+    }
+
     return {
       timestamp: new Date().toISOString(),
       solar,
       weather,
       growatt: {
         plantId,
-        status: 'stub',
+        status: inverterData ? 'connected' : 'error',
+        inverterData,
       },
       uptime: Math.floor((Date.now() - this.startTime) / 1000),
     };
