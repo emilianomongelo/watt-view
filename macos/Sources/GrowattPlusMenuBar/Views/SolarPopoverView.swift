@@ -53,7 +53,7 @@ struct SolarPopoverView: View {
                 .foregroundStyle(.yellow)
                 .font(.title3)
 
-            Text("Growatt Plus")
+            Text("Watt View")
                 .font(.headline)
 
             Spacer()
@@ -120,12 +120,12 @@ struct SolarPopoverView: View {
 
     private func weatherView(_ weather: SolarStatus.WeatherInfo) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: weatherIcon(for: weather.condition))
+            Image(systemName: weatherIcon(for: weather.weatherCode))
                 .font(.title2)
                 .foregroundStyle(.cyan)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(weather.condition)
+                Text(weatherCondition(for: weather.weatherCode))
                     .font(.subheadline.weight(.medium))
                 Text(String(format: "%.0f°C", weather.temperature))
                     .font(.caption)
@@ -172,20 +172,29 @@ struct SolarPopoverView: View {
 
     // MARK: - Helpers
 
-    private func weatherIcon(for condition: String) -> String {
-        let lower = condition.lowercased()
-        if lower.contains("clear") || lower.contains("sunny") {
-            return "sun.max.fill"
-        } else if lower.contains("cloud") {
-            return "cloud.fill"
-        } else if lower.contains("rain") {
-            return "cloud.rain.fill"
-        } else if lower.contains("storm") || lower.contains("thunder") {
-            return "cloud.bolt.fill"
-        } else if lower.contains("snow") {
-            return "cloud.snow.fill"
-        } else {
-            return "cloud.sun.fill"
+    private func weatherCondition(for code: Int) -> String {
+        switch code {
+        case 0: return "Clear"
+        case 1, 2, 3: return "Partly Cloudy"
+        case 45, 48: return "Foggy"
+        case 51...67: return "Drizzle"
+        case 71...77: return "Snow"
+        case 80...82: return "Rain"
+        case 95...99: return "Thunderstorm"
+        default: return "Cloudy"
+        }
+    }
+
+    private func weatherIcon(for code: Int) -> String {
+        switch code {
+        case 0: return "sun.max.fill"
+        case 1, 2, 3: return "cloud.sun.fill"
+        case 45, 48: return "cloud.fog.fill"
+        case 51...67: return "cloud.drizzle.fill"
+        case 71...77: return "cloud.snow.fill"
+        case 80...82: return "cloud.rain.fill"
+        case 95...99: return "cloud.bolt.fill"
+        default: return "cloud.fill"
         }
     }
 }

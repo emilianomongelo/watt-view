@@ -1,12 +1,17 @@
 import Foundation
 
-/// Thin wrapper around URLSession for the Growatt solar backend.
+/// Thin wrapper around URLSession for the Watt View solar backend.
 struct SolarAPIClient {
     /// Base URL stored in UserDefaults so the user can change it from Settings.
     var baseURL: URL {
         let raw = UserDefaults.standard.string(forKey: "apiBaseURL")
-            ?? "http://localhost:3000/api/status"
-        return URL(string: raw) ?? URL(string: "http://localhost:3000/api/status")!
+            ?? "http://209.46.125.190:3000/api/status"
+        return URL(string: raw) ?? URL(string: "http://209.46.125.190:3000/api/status")!
+    }
+
+    /// API token stored in UserDefaults for Bearer authentication.
+    var apiToken: String {
+        UserDefaults.standard.string(forKey: "apiToken") ?? ""
     }
 
     /// Fetch the latest solar status from the backend.
@@ -15,6 +20,10 @@ struct SolarAPIClient {
         request.timeoutInterval = 10
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
+        if !apiToken.isEmpty {
+            request.setValue("Bearer \(apiToken)", forHTTPHeaderField: "Authorization")
+        }
+
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -22,6 +31,9 @@ struct SolarAPIClient {
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
+            if httpResponse.statusCode == 401 {
+                throw APIError.unauthorized
+            }
             throw APIError.httpError(statusCode: httpResponse.statusCode)
         }
 
@@ -48,6 +60,7 @@ struct SolarAPIClient {
 
 enum APIError: LocalizedError {
     case invalidResponse
+    case unauthorized
     case httpError(statusCode: Int)
     case decodingFailed(Error)
 
@@ -55,6 +68,8 @@ enum APIError: LocalizedError {
         switch self {
         case .invalidResponse:
             return "Invalid response from server."
+        case .unauthorized:
+            return "Invalid API token. Check your token in Settings."
         case .httpError(let code):
             return "Server returned HTTP \(code)."
         case .decodingFailed(let underlying):

@@ -47,11 +47,15 @@ final class SolarDataModel: ObservableObject {
 
         do {
             let status = try await apiClient.fetchStatus()
-            batterySOC = status.battery.soc
-            batteryPower = status.battery.power
-            production = status.solar.production
-            consumption = status.solar.consumption
-            dailyYield = status.solar.dailyYield
+
+            if let inverter = status.growatt.inverterData {
+                batterySOC = inverter.batterySoc
+                batteryPower = inverter.batteryPower
+                production = inverter.pvPower / 1000.0  // Convert W to kW
+                consumption = inverter.loadPower / 1000.0  // Convert W to kW
+                dailyYield = inverter.dailyYield
+            }
+
             weather = status.weather
             lastUpdated = Date()
         } catch {
