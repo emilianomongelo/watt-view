@@ -39,6 +39,10 @@ export class Environment {
   @IsOptional()
   OPENAI_MODEL = '';
 
+  @IsString()
+  @IsOptional()
+  API_TOKEN = '';
+
   @Transform(({ value }) => parseInt(value, 10))
   @IsNumber()
   PORT = 3000;

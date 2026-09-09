@@ -10,6 +10,7 @@ import { StatusModule } from './status/status.module';
 import { SolarModule } from './solar/solar.module';
 import { WeatherModule } from './weather/weather.module';
 import { ChatModule } from './chat/chat.module';
+import { AuthModule } from './auth/auth.module';
 import { Reading } from './readings/reading.entity';
 
 @Module({
@@ -35,6 +36,7 @@ import { Reading } from './readings/reading.entity';
     SolarModule,
     WeatherModule,
     ChatModule,
+    AuthModule,
   ],
 })
 export class AppModule {}

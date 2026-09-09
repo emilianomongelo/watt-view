@@ -1,8 +1,9 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { WeatherService } from './weather.service';
 import type { WeatherCurrent, WeatherForecast, WeatherDaily } from './weather.types';
 
+@ApiBearerAuth()
 @ApiTags('weather')
 @Controller('api/weather')
 export class WeatherController {

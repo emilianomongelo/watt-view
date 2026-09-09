@@ -10,10 +10,11 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { ReadingsService } from './readings.service';
 import { Reading } from './reading.entity';
 
+@ApiBearerAuth()
 @ApiTags('readings')
 @Controller('api/readings')
 export class ReadingsController {

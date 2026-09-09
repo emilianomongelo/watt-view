@@ -1,7 +1,8 @@
 import { Body, Controller, Post, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ChatService, ChatMessage, ChatResponse } from './chat.service';
 
+@ApiBearerAuth()
 @ApiTags('chat')
 @Controller('api/chat')
 export class ChatController {

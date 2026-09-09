@@ -1,7 +1,8 @@
 import { Controller, Get } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { StatusService, SystemStatus } from './status.service';
 
+@ApiBearerAuth()
 @ApiTags('status')
 @Controller('api/status')
 export class StatusController {
