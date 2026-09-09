@@ -9,6 +9,8 @@ import {
   ParseIntPipe,
   HttpCode,
   HttpStatus,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { ReadingsService } from './readings.service';
@@ -21,6 +23,7 @@ import { Reading } from './reading.entity';
 export class ReadingsController {
   constructor(
     private readonly readingsService: ReadingsService,
+    @Inject(forwardRef(() => GrowattService))
     private readonly growattService: GrowattService,
   ) {}
 
