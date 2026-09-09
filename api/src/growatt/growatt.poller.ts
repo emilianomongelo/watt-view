@@ -16,16 +16,10 @@ export class GrowattPoller {
   async handlePoll(): Promise<void> {
     this.logger.debug('Polling Growatt API');
     try {
-      const plantId = process.env.GROWATT_PLANT_ID ?? '';
-      if (!plantId) {
-        this.logger.warn('GROWATT_PLANT_ID not set, skipping poll');
-        return;
-      }
-
-      const inverterData = await this.growattService.getInverterData(plantId);
+      const { inverterData } = await this.growattService.getPlantData();
 
       await this.readingsService.create({
-        recorded_at: new Date(),
+        recorded_at: inverterData.recordedAt,
         pv_power: inverterData.pvPower,
         battery_soc: inverterData.batterySoc,
         battery_power: inverterData.batteryPower,
@@ -33,7 +27,9 @@ export class GrowattPoller {
         daily_yield: inverterData.dailyYield,
       });
 
-      this.logger.debug('Poll completed successfully');
+      this.logger.debug(
+        `Poll OK: PV=${inverterData.pvPower}W SOC=${inverterData.batterySoc}%`,
+      );
     } catch (error) {
       this.logger.error('Poll failed', error);
     }

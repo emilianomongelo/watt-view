@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
+import { resolve } from 'path';
 import { validate } from './config/environment';
 import { GrowattModule } from './growatt/growatt.module';
 import { ReadingsModule } from './readings/readings.module';
@@ -16,6 +17,7 @@ import { Reading } from './readings/reading.entity';
     ConfigModule.forRoot({
       isGlobal: true,
       validate,
+      envFilePath: resolve(__dirname, '../../.env'),
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
