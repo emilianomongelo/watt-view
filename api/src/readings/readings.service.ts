@@ -38,9 +38,11 @@ export class ReadingsService {
   }
 
   async findLatest(): Promise<Reading | null> {
-    return this.readingRepo.findOne({
+    const results = await this.readingRepo.find({
       order: { recorded_at: 'DESC' },
+      take: 1,
     });
+    return results[0] ?? null;
   }
 
   async findById(id: number): Promise<Reading | null> {
