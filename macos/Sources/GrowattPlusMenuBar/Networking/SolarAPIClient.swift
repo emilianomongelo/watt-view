@@ -11,7 +11,8 @@ struct SolarAPIClient {
 
     /// API token stored in UserDefaults for Bearer authentication.
     var apiToken: String {
-        UserDefaults.standard.string(forKey: "apiToken") ?? ""
+        UserDefaults.standard.string(forKey: "apiToken")
+            ?? "73f42ef8-263b-4fee-9c1e-a55208639f3e"
     }
 
     /// Fetch the latest solar status from the backend.

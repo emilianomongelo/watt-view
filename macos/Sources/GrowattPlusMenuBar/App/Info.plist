@@ -18,5 +18,10 @@
     <true/>
     <key>NSLocalNetworkUsageDescription</key>
     <string>Growatt Plus needs to access your solar monitoring backend.</string>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+    </dict>
 </dict>
 </plist>
