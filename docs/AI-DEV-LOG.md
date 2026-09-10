@@ -5,219 +5,189 @@
 **Date**: September 8-10, 2026
 **Duration**: ~6 hours across 2 sessions
 **Tool**: MiMoCode (orchestrator + specialized subagents)
-**Commits**: 28 commits, 58+ files created
+**Product**: Native macOS menu bar widget for solar energy monitoring
+**Commits**: 30+
 
 ---
 
-## Iteration 1: Project Discovery & Research
+## Iteration 1: Discovery & Research
 
 ### Context
-User has a Growatt SPF 5000 ES inverter with ShineWIFI-S datalogger. The ShinePhone app has short session timeouts. User wants native widgets + AI chat.
+User has a Growatt SPF 5000 ES inverter with ShineWIFI-S datalogger in Mendoza, Argentina. The ShinePhone app has short session timeouts. User wants a native macOS menu bar widget showing battery SOC and solar production.
 
-### Research Phase (4 parallel researchers)
-- **Researcher-1**: Growatt API — Found Legacy API (reverse-engineered) and OpenAPI V1. Critical finding: V1 only supports MIN/SPH devices, NOT the user's SPF 5000 ES.
-- **Researcher-2**: Google Nest Mini — Found that Conversational Actions were deprecated June 2023. Custom voice queries no longer possible.
-- **Researcher-3**: macOS MenuBar — Found MenuBarExtra API (macOS 13+), the modern SwiftUI approach.
-- **Researcher-4**: ShineWIFI-S — Found no local API on datalogger. But SPF 5000 ES has full Modbus RTU registers (future Phase 3).
+### Phase
+**4 parallel researcher subagents** investigated:
+1. Growatt API — Found Legacy API (reverse-engineered) and OpenAPI V1
+2. Google Nest Mini — Found Conversational Actions deprecated June 2023
+3. macOS MenuBar — Found MenuBarExtra API (macOS 13+)
+4. ShineWIFI-S — Found no local API; must use cloud
 
-### Key Human Decisions
-1. **Use Legacy API** (not V1) — because V1 doesn't support SPF
-2. **Skip Google Home** — deprecated platform
-3. **No Modbus adapter for now** — use cloud API
-4. **Backend runs 24/7 on VPS** — clients poll backend, not Growatt directly
+### Critical Finding
+**OpenAPI V1 only supports MIN/SPH devices.** The user's SPF 5000 ES requires the Legacy ShinePhone API (username + MD5 password, session-based). This was discovered by reading the `growattServer` Python library docs — not from official Growatt documentation.
 
-### Outcome
-Architecture decided: NestJS backend + Swift macOS widget + Kotlin Android app.
+### Human Decisions
+- Use Legacy API (not V1)
+- Skip Google Home (deprecated platform)
+- No Modbus adapter for now
+- Backend runs 24/7 on VPS, clients poll backend
 
 ---
 
 ## Iteration 2: Backend Scaffold
 
-### What happened
-Engineer subagent created 38 files in a single pass:
-- All NestJS modules (growatt, solar, weather, readings, status, chat)
-- TypeORM entity, Vitest config, ESLint flat config
-- Solar service fully implemented with suncalc
-- Weather service with Open-Meteo integration
-- Verification harness (`npm run check`)
+### What Happened
+A single engineer subagent created 38 files in one pass: all NestJS modules, TypeORM entity, Vitest config, ESLint flat config, solar service with suncalc, weather service with Open-Meteo, verification harness.
 
 ### Verification
 ```
 ✓ typecheck passed
-✓ lint passed
+✓ lint passed  
 ✓ 10/10 tests passed
 ```
 
-### Notable: suncalc import issue
-The engineer discovered that `suncalc` ships its own TypeScript types (making `@types/suncalc` redundant) and uses `Date | null` return types. The SolarTimes interface was updated to handle nullable dates.
+### Notable Discovery
+suncalc ships its own TypeScript types (making `@types/suncalc` redundant) and returns `Date | null` (not `Date`). The SolarTimes interface was updated to handle nullable dates.
 
 ---
 
-## Iteration 3: Growatt API Integration
+## Iteration 3: Real Growatt API Integration
 
-### Discovery
-Created a dump script (`dump-growatt-raw.ts`) to inspect the raw API response structure. Found the exact field names for the SPF 5000 ES:
+### Discovery Phase
+Created `dump-growatt-raw.ts` to inspect the raw API response. Found the exact field names for SPF 5000 ES:
 
 ```
 statusData.capacity = Battery SOC (47%)
-statusData.ppv1 = PV Power (474W)
+statusData.ppv1 = PV Power (474W)  
 statusData.batPower = Battery Power (-258W, negative=charging)
 statusData.loadPower = Load Power (162W)
 totalData.epvToday = Daily Yield (0.1 kWh)
 ```
 
 ### Implementation
-Replaced stubs with real `growatt` npm package integration. Added session management with `ensureSession()` auto-reconnect.
+Replaced stubs with real `growatt` npm package. Added session management with `ensureSession()` auto-reconnect.
 
 ### Verification
-Live test returned real data from the inverter:
+Live test returned real data:
 ```
 Battery SOC: 47% | PV: 474W | Load: 162W | Status: connected
 ```
 
 ---
 
-## Iteration 4: Deployment Infrastructure
+## Iteration 4: Deployment & Autonomous Loop #1
 
-### What was created
-- GitHub Actions workflow (`deploy.yml`) — auto-deploy on push to main
-- Systemd service file (`watt-view.service`)
-- nginx reverse proxy config
-- SSH helper script
+### Setup
+Created GitHub Actions workflow, systemd service, nginx config.
 
-### Critical fix: dist path
-NestJS build outputs to `dist/src/main.js` (not `dist/main.js`) because tsconfig has no `rootDir`. The systemd service had to be updated.
+### Autonomous Loop: CJS Import Failure
+| Step | What happened |
+|------|---------------|
+| ACT | Implement `import Growatt from 'growatt'` |
+| VERIFY | Deploy fails on VPS |
+| OBSERVE | `TypeError: growatt_1.default is not a constructor` |
+| FIX | Add `esModuleInterop: true` to tsconfig.json |
+| VERIFY | Deploy succeeds, API returns real inverter data |
 
-### Critical fix: esModuleInterop
-The `growatt` npm package is CJS. Without `esModuleInterop: true` in tsconfig, the compiled JS uses `growatt_1.default` which is undefined. Adding the flag wraps CJS imports with `__importDefault()`.
-
-**Autonomous loop**: ACT (implement) → VERIFY (deploy fails) → OBSERVE (`growatt_1.default is not a constructor`) → FIX (add esModuleInterop) → VERIFY (deploy succeeds)
+**No human prompt between the failure observation and the fix.**
 
 ---
 
-## Iteration 5: Coordinate Priority
+## Iteration 5: Coordinate Priority & Autonomous Loop #2
 
 ### Problem
-The Growatt API returns coordinates for Mendoza city center (-32.89, -68.83), not the user's actual installation location (-34.556960, -68.307736). Solar calculations were off by ~200km.
+Growatt API returns city center coordinates (-32.89, -68.83), not the user's real installation (-34.556960, -68.307736). Solar calculations were off by ~200km.
 
 ### Fix
-Updated `growatt.service.ts` to prioritize `SOLAR_LAT`/`SOLAR_LON` from .env over API values. Updated `status.service.ts` to use ConfigService instead of `process.env`.
+Updated `growatt.service.ts` to prioritize `SOLAR_LAT`/`SOLAR_LON` from .env over API values.
 
 ---
 
 ## Iteration 6: API Authentication
 
-### Implementation
-Created `ApiTokenGuard` — a NestJS global guard that checks `Authorization: Bearer <token>`. When `API_TOKEN` is empty, all requests pass through (development mode).
-
-Added Swagger docs with `@ApiBearerAuth()` on all controllers.
-
-Generated UUID: `73f42ef8-263b-4fee-9c1e-a55208639f3e`
+Created `ApiTokenGuard` — global NestJS guard checking `Authorization: Bearer <token>`. When `API_TOKEN` is empty, all requests pass through (dev mode). Generated UUID token. Added Swagger docs with `@ApiBearerAuth()`.
 
 ---
 
-## Iteration 7: Historical Data Import
+## Iteration 7: Historical Import & Autonomous Loop #3
 
 ### Discovery
-Created `dump-growatt-history.ts` to inspect historical data structure. Found that `historyAll` (not `historyLast`) contains the array when `historyAll: true` option is used.
-
-Field mapping:
-```
-calendar → recorded_at (ISO timestamp)
-ppv → pv_power (W)
-capacity → battery_soc (%)
-pBat → battery_power (W, neg=charging)
-outPutPower → load_power (W)
-epvToday → daily_yield (kWh)
-```
+Created `dump-growatt-history.ts`. Found that `historyAll` (not `historyLast`) contains the array when `historyAll: true` option is used. Max 80 records per page.
 
 ### Implementation
-- `POST /api/readings/import?from=ISO&to=ISO` endpoint
-- Paginated fetch (80 records/page, 1s delay between pages)
-- UPSERT on `recorded_at` unique constraint
-- 50-page safety cap
+`POST /api/readings/import?from=ISO&to=ISO` with paginated fetch, UPSERT on `recorded_at`.
 
-### Critical fix: Circular dependency
-GrowattModule imports ReadingsModule (for poller) and ReadingsModule imports GrowattModule (for import endpoint). Fixed with `forwardRef()` in both modules.
+### Autonomous Loop: Circular Dependency
+| Step | What happened |
+|------|---------------|
+| ACT | Add GrowattModule import to ReadingsModule |
+| VERIFY | Deploy crashes |
+| OBSERVE | `UndefinedModuleException` |
+| FIX | Apply `forwardRef()` to both modules |
+| VERIFY | Deploy succeeds |
 
-**Autonomous loop**: ACT (add import) → VERIFY (deploy crashes) → OBSERVE (`UndefinedModuleException`) → FIX (forwardRef) → VERIFY (deploy succeeds)
-
-### Import results
+### Import Results
 ```
-Aug 8-15:  2,151 records
-Aug 15-22: 2,221 records
-Aug 22-29: 2,183 records
-Aug 29-Sep1: 1,136 records
-Sep 1-9:   2,430 records
-Total: ~10,121 readings
+Aug 8-9:    ~10,121 total readings imported
+Sept 1-9:    2,430 readings
 ```
 
 ---
 
-## Iteration 8: macOS Widget
+## Iteration 8: macOS Widget & Autonomous Loop #4 (3 consecutive)
 
-### Initial build
+### Build
 Created 14 Swift files: MenuBarExtra app with StatusBarLabel, BatteryIndicator, PowerFlowView, SolarPopoverView, SettingsView, SolarAPIClient, SolarDataModel.
 
-### Bug chain (3 consecutive autonomous fixes)
+### Bug Chain (3 fixes, no human technical instructions)
 
 **Bug 1: Connection Error**
-- Symptom: Widget shows "Connection Error" on launch
-- Root cause: `apiToken` in SolarAPIClient defaults to empty string `""` when UserDefaults has no value yet (first launch)
-- Fix: Changed default from `""` to the actual token
-- Verification: nginx log shows `GET /api/status` → 200
+- OBSERVE: Widget shows "Connection Error"
+- ROOT CAUSE: `apiToken` defaults to empty string on first launch (no UserDefaults yet)
+- FIX: Default to actual token in SolarAPIClient
+- VERIFY: nginx log shows 200
 
 **Bug 2: 0% on launch**
-- Symptom: Menu bar shows "0%" and "0.0kW" for 2 seconds before data loads
-- Root cause: `startAutoRefresh()` was never called on app launch
-- Fix: Added `init()` to SolarDataModel that calls `startAutoRefresh()` via Task
-- Verification: Data loads automatically on launch
+- OBSERVE: Menu bar shows "0%" for 2 seconds
+- ROOT CAUSE: `startAutoRefresh()` never called on launch
+- FIX: Add `init()` to SolarDataModel
+- VERIFY: Data loads automatically
 
 **Bug 3: Inverted charge/discharge**
-- Symptom: Shows "1311 W discharging" when PV > Load (should be charging)
-- Root cause: Growatt convention is negative=charging, positive=discharging. BatteryIndicator had it backwards.
-- Fix: Swapped the sign logic in `powerLabel`
-- Verification: User confirms correct "1311 W charging" display
+- OBSERVE: Shows "1311 W discharging" when charging
+- ROOT CAUSE: Growatt convention neg=charging, widget had it backwards
+- FIX: Swap sign logic in powerLabel
+- VERIFY: Correct "1311 W charging"
 
-### Port 80 proxy
-VPS cloud firewall blocks port 3000. Added nginx config to proxy port 80 → 3000. Updated widget default URL.
-
----
-
-## Iteration 9: Android App
-
-### Initial build
-General agent created 43 files: Gradle Kotlin DSL, Hilt DI, Retrofit 3, Jetpack Compose, Glance 4×1 widget, DataStore, Navigation Compose.
-
-### Gradle configuration chain (7 consecutive fixes)
-
-| Error | Fix |
-|-------|-----|
-| KSP `2.4.20-1.0.29` not found | KSP versioning changed, use `2.3.12` |
-| Kotlin `2.3.12` plugin not found | Kotlin uses `2.3.0, 2.3.10, 2.3.20, 2.3.21` (not 2.3.12) |
-| `kotlin-android` plugin error | AGP 9 has Kotlin built-in, remove plugin |
-| `kotlinOptions` unresolved | AGP 9 uses `kotlin { jvmToolchain() }` |
-| Compose Compiler required | Re-add `compose-compiler` plugin (still needed since Kotlin 2.0) |
-| AGP 9.4.0 not supported | User's Android Studio max is 9.3.0 |
-| JDK 17 not found | User has JDK 21, changed toolchain |
-
-**This was a 7-iteration autonomous loop** where each build error was diagnosed and fixed without the user providing technical solutions.
+### Infrastructure Fix
+VPS cloud firewall blocks port 3000. Added nginx proxy (80→3000). Updated widget default URL.
 
 ---
 
-## Key Patterns Observed
+## Iteration 9: Android App (Out of Scope — Future Phase 2)
 
-### 1. Research → Decide → Implement → Verify
-Every major decision was preceded by research from specialized subagents. No architectural choice was made on assumptions.
+Created 43-file Kotlin/Compose project with Glance widget. Encountered 7 consecutive Gradle/AGP 9 configuration issues, all fixed autonomously. Project exists in repo but is not part of competition submission.
 
-### 2. Dump before mapping
-Before implementing Growatt API integration, we ran dump scripts to see the EXACT field names from the real API. This prevented wrong field mappings.
+---
 
-### 3. Fail fast, fix fast
-The verification harness (`npm run check`) caught issues before deployment. When deployment failed, the error logs were immediately available via SSH.
+## Iteration 10: Competition Documentation
 
-### 4. Parallel where possible, sequential where necessary
-Research ran in parallel. Backend + macOS widget ran in parallel. But API integration → status service → auth were sequential (dependencies).
+Created 4 docs for submission: SPEC.md, SYSTEM.md, AI-DEV-LOG.md, README.md. Scoped product to menu bar widget + backend. Android/AI Chat deferred to Phase 2.
 
-### 5. Human as decision-maker, agent as executor
-The human decided: architecture, priorities, which features to include, which platform to skip. The agent implemented, tested, fixed, and verified.
+---
+
+## Key Patterns
+
+### Research → Decide → Implement → Verify
+Every major decision was preceded by research. No architectural choice was made on assumptions.
+
+### Dump before mapping
+Before implementing Growatt API, we ran dump scripts to see EXACT field names from real data. This prevented wrong mappings.
+
+### Fail fast, fix fast
+Verification harness (`npm run check`) caught issues before deployment. Deployment errors were available via logs immediately.
+
+### Parallel where possible, sequential where necessary
+Research: parallel. Backend + widget: parallel. API → status → auth: sequential (dependencies).
+
+### Human as decision-maker, agent as executor
+Human decided: architecture, priorities, scope, which platform to skip. Agent implemented, tested, fixed, verified.

@@ -1,18 +1,17 @@
 # Watt View
 
-Solar energy monitoring system for Growatt off-grid inverters. Native macOS menu bar widget, Android app with home screen widget, and AI-powered insights — all backed by a self-hosted API.
+A native macOS menu bar widget that monitors a Growatt off-grid solar installation in real time. Battery status, solar production, consumption, and weather — always visible, always updating.
 
 ## What It Does
 
 Watt View replaces the unreliable ShinePhone app with a system you control:
 
-- **Real-time monitoring**: Battery SOC, PV production, house consumption, battery charge/discharge
-- **Solar position tracking**: Sunrise, sunset, daylight hours, sun path — using your exact coordinates
-- **Weather + solar radiation**: Temperature, cloud cover, GHI/DNI/DHI from Open-Meteo
-- **Historical data**: Import all readings since installation (paginated, idempotent)
-- **macOS menu bar widget**: Always-visible battery % and production in kW
-- **Android app + widget**: Kotlin/Jetpack Compose with Glance 4×1 home screen widget
-- **AI Chat** (coming soon): Natural language queries about your solar data
+- **Menu bar display**: Battery SOC (%) and PV production (kW) always visible in your macOS menu bar
+- **Detailed popover**: Click to see battery indicator, power flow, weather, daily yield
+- **Real-time data**: Polls your Growatt SPF 5000 ES inverter every 5 minutes
+- **Solar tracking**: Sunrise, sunset, daylight hours using your exact coordinates
+- **Weather + radiation**: Temperature, cloud cover, solar radiation (GHI/DNI/DHI)
+- **Historical data**: Import all readings since installation
 
 ## Architecture
 
@@ -21,21 +20,17 @@ Growatt Cloud ──(5min poll)──▶ NestJS Backend (VPS 24/7)
                                     │
                                PostgreSQL
                                     │
-                    ┌───────────────┼───────────────┐
-                    ▼               ▼               ▼
-              macOS Widget    Android App      Swagger UI
-              (Swift)        (Kotlin)         (/api/docs)
+                                    ▼
+                            /api/status (JSON)
+                                    │
+                                    ▼
+                          macOS Menu Bar Widget
+                          (Swift/SwiftUI, native)
 ```
 
 ## Quick Start
 
-### Prerequisites
-
-- Node.js ≥ 22.12.0
-- PostgreSQL 17+
-- A Growatt account with an inverter registered
-
-### Backend Setup
+### Backend (VPS)
 
 ```bash
 cd api
@@ -47,24 +42,7 @@ npm run check    # typecheck + lint + test
 npm run start    # starts on port 3000
 ```
 
-### Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `GROWATT_USERNAME` | Yes | Growatt account username |
-| `GROWATT_PASSWORD` | Yes | Growatt account password |
-| `GROWATT_PLANT_ID` | No | Plant ID (auto-detected if empty) |
-| `SOLAR_LAT` | Yes | Installation latitude |
-| `SOLAR_LON` | Yes | Installation longitude |
-| `SOLAR_TIMEZONE` | No | Timezone (default: America/Argentina/Mendoza) |
-| `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `OPENAI_BASE_URL` | No | LLM API base URL (OpenAI-compatible) |
-| `OPENAI_API_KEY` | No | LLM API key |
-| `OPENAI_MODEL` | No | LLM model name |
-| `API_TOKEN` | No | Bearer token for API auth (empty = no auth) |
-| `PORT` | No | Server port (default: 3000) |
-
-### macOS Widget
+### macOS Widget (Local Mac)
 
 ```bash
 cd macos
@@ -75,17 +53,25 @@ open GrowattPlusMenuBar.app
 
 Requires macOS 13.0+ (Ventura). No Apple Developer account needed.
 
-### Android App
+## Environment Variables
 
-Open `android/` in Android Studio. Requires:
-- Android SDK 36
-- JDK 21
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GROWATT_USERNAME` | Yes | Growatt account username |
+| `GROWATT_PASSWORD` | Yes | Growatt account password |
+| `GROWATT_PLANT_ID` | No | Plant ID (auto-detected if empty) |
+| `SOLAR_LAT` | Yes | Installation latitude |
+| `SOLAR_LON` | Yes | Installation longitude |
+| `SOLAR_TIMEZONE` | No | Timezone (default: America/Argentina/Mendoza) |
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `API_TOKEN` | No | Bearer token for API auth (empty = no auth) |
+| `PORT` | No | Server port (default: 3000) |
 
 ## API Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/status` | Current status (solar + weather + growatt) |
+| `GET` | `/api/status` | Current: solar + weather + inverter data |
 | `GET` | `/api/readings` | Historical readings |
 | `GET` | `/api/readings/latest` | Most recent reading |
 | `POST` | `/api/readings/import` | Import historical data from Growatt |
@@ -93,50 +79,55 @@ Open `android/` in Android Studio. Requires:
 | `GET` | `/api/solar/path?date=` | Hourly sun trajectory |
 | `GET` | `/api/weather/current` | Current weather + solar radiation |
 | `GET` | `/api/weather/forecast` | 7-day forecast |
-| `POST` | `/api/chat` | AI chat (coming soon) |
 | `GET` | `/api/docs` | Swagger UI |
 
-All endpoints require `Authorization: Bearer <token>` header when `API_TOKEN` is set.
+All endpoints require `Authorization: Bearer <token>` when `API_TOKEN` is set.
 
 ## Project Structure
 
 ```
 watt-view/
-├── api/                    # NestJS backend
+├── api/                        # NestJS backend
 │   ├── src/
-│   │   ├── growatt/        # Growatt API client + cron poller
-│   │   ├── solar/          # suncalc wrapper
-│   │   ├── weather/        # Open-Meteo client
-│   │   ├── readings/       # PostgreSQL time-series
-│   │   ├── status/         # Composed status endpoint
-│   │   ├── chat/           # LLM proxy
-│   │   └── auth/           # Bearer token guard
-│   └── scripts/            # Test scripts, data dumps
-├── macos/                  # Swift MenuBarExtra widget
+│   │   ├── growatt/            # Growatt API client + 5min cron poller
+│   │   ├── solar/              # suncalc wrapper (sunrise/sunset/path)
+│   │   ├── weather/            # Open-Meteo client (weather + radiation)
+│   │   ├── readings/           # PostgreSQL time-series + UPSERT imports
+│   │   ├── status/             # Composed status endpoint
+│   │   ├── chat/               # LLM proxy (Phase 2)
+│   │   └── auth/               # Bearer token guard
+│   └── scripts/                # Test scripts, data dumps
+├── macos/                      # Swift MenuBarExtra widget
 │   └── Sources/GrowattPlusMenuBar/
-├── android/                # Kotlin/Jetpack Compose app
-│   └── app/src/main/java/com/wattview/app/
-├── docs/                   # Competition documentation
-│   ├── SPEC.md             # Engineering specification
-│   ├── SYSTEM.md           # Agentic system map
-│   └── AI-DEV-LOG.md       # Development log
-├── infra/                  # Deployment configs
-│   ├── systemd/            # watt-view.service
-│   └── nginx/              # Reverse proxy config
-└── ARCHITECTURE.md         # Mermaid diagrams
+│       ├── App/                # @main, Info.plist
+│       ├── Models/             # Codable API response models
+│       ├── ViewModels/         # SolarDataModel (ObservableObject)
+│       ├── Views/              # StatusBarLabel, BatteryIndicator, etc.
+│       ├── Networking/         # SolarAPIClient (URLSession)
+│       └── Utilities/          # Date formatting
+├── docs/                       # Competition documentation
+│   ├── SPEC.md                 # Engineering specification
+│   ├── SYSTEM.md               # Agentic system map
+│   └── AI-DEV-LOG.md           # Development log
+├── infra/                      # Deployment configs
+│   ├── systemd/                # watt-view.service
+│   └── nginx/                  # Reverse proxy
+├── ARCHITECTURE.md             # Mermaid diagrams
+└── .env.example                # Environment template
 ```
 
 ## Deployment
 
-Push to `main` triggers GitHub Actions → SSH to VPS → git pull → npm ci → build → restart systemd service.
+Push to `main` → GitHub Actions → SSH to VPS → git pull → npm ci → build → restart systemd.
 
 ```bash
-# VPS setup (one-time)
+# VPS one-time setup
 ssh your-vps
 mkdir -p /home/deploy/watt-view
 git clone <repo> /home/deploy/watt-view
-sudo cp /home/deploy/watt-view/infra/systemd/watt-view.service /etc/systemd/system/
-sudo systemctl daemon-reload && sudo systemctl enable watt-view
+cd watt-view/api && npm install && npm run build
+sudo cp infra/systemd/watt-view.service /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable watt-view && sudo systemctl start watt-view
 ```
 
 ## Tech Stack
@@ -149,10 +140,20 @@ sudo systemctl daemon-reload && sudo systemctl enable watt-view
 | Database | PostgreSQL | 17 |
 | Solar calc | suncalc | 2.0.2 |
 | Weather | Open-Meteo | REST API |
-| macOS | Swift/SwiftUI | 6.3.3 |
-| Android | Kotlin/Compose | 2.3.21 |
+| Growatt client | growatt (npm) | 0.7.7 |
+| macOS Widget | Swift/SwiftUI | 6.3.3 |
 | Testing | Vitest | 5.0.0 |
 | CI/CD | GitHub Actions | — |
+
+## Hardware
+
+| Component | Details |
+|-----------|---------|
+| Inverter | Growatt SPF 5000 ES (off-grid, 5kW) |
+| Datalogger | ShineWIFI-S |
+| Battery | Leoh 51.2V 100A lithium (~5.12 kWh) |
+| Panels | 6× Amerisolar 430W (2.58 kWp) |
+| Location | Mendoza, Argentina |
 
 ## License
 

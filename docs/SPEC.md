@@ -2,11 +2,11 @@
 
 ## Objective
 
-Build a solar energy monitoring system that replaces the unreliable ShinePhone app for a Growatt SPF 5000 ES off-grid inverter installation in Mendoza, Argentina. The system must provide real-time monitoring via native desktop and mobile widgets, historical data tracking, and AI-powered insights — all backed by a self-hosted API that polls the inverter every 5 minutes.
+Build a native macOS menu bar widget that monitors a Growatt off-grid solar installation in real time, replacing the unreliable ShinePhone app. The widget connects to a self-hosted API that polls a Growatt SPF 5000 ES inverter every 5 minutes and presents battery status, solar production, consumption, and weather data directly in the macOS menu bar — no app window required.
 
 ## Problem Statement
 
-The existing ShinePhone app has a short session timeout that logs the user out frequently, making continuous monitoring impractical. Additionally, the app provides no API for integration with custom dashboards, widgets, or AI agents. The user needs a reliable, always-on monitoring solution with native OS integration.
+The existing ShinePhone app has a short session timeout that logs the user out frequently, making continuous monitoring impractical. The user needs a glanceable, always-visible monitoring solution that lives in the macOS menu bar and updates automatically.
 
 ## Hardware Context
 
@@ -19,96 +19,114 @@ The existing ShinePhone app has a short session timeout that logs the user out f
 | Location | Mendoza, Argentina (-34.556960, -68.307736) |
 | Grid connection | None (fully off-grid) |
 
+## Scope
+
+### In Scope (Competition Submission)
+
+| Component | Status |
+|-----------|--------|
+| NestJS backend API (VPS 24/7) | ✅ Working |
+| Growatt polling (5min cron) | ✅ Working |
+| Historical data import (~10K readings) | ✅ Working |
+| Solar position tracking (suncalc) | ✅ Working |
+| Weather + solar radiation (Open-Meteo) | ✅ Working |
+| API authentication (Bearer token) | ✅ Working |
+| Swagger documentation | ✅ Working |
+| macOS menu bar widget (Swift) | ✅ Working |
+| Verification harness (typecheck+lint+test) | ✅ Working |
+| GitHub Actions CI/CD | ✅ Working |
+
+### Out of Scope (Future Phases)
+
+| Component | Phase |
+|-----------|-------|
+| Android app + widget | Phase 2 |
+| AI Chat Agent | Phase 2 |
+| Google Home integration | Deferred |
+| USB-RS485 Modbus direct access | Phase 3 |
+| Web dashboard | Not planned |
+
 ## Requirements
 
 ### Functional
 
 1. **Real-time monitoring**: Battery SOC (%), PV power (W), load/consumption (W), battery power (W, charge/discharge), daily yield (kWh)
-2. **Solar position tracking**: Sunrise, sunset, solar noon, daylight hours, sun path trajectory — using real coordinates, not city-center approximations
+2. **Solar position tracking**: Sunrise, sunset, solar noon, daylight hours — using real coordinates from .env, not Growatt's forced city-center values
 3. **Weather integration**: Current temperature, cloud cover, humidity, wind, solar radiation (GHI/DNI/DHI) from Open-Meteo
-4. **Historical data**: Import and store all available historical readings from Growatt API (since installation date: 2026-08-08)
-5. **macOS menu bar widget**: Native Swift app showing battery SOC and PV production in the macOS menu bar, with popover for detailed view
-6. **Android app with widget**: Kotlin/Jetpack Compose app with Glance 4×1 home screen widget
-7. **AI Chat Agent**: Natural language queries about solar data (e.g., "will the battery last through the night?", "how much do I consume between 1am-7am?")
-8. **API authentication**: Bearer token to protect endpoints from unauthorized access
+4. **Historical data**: Import and store all available readings from Growatt API since installation date (2026-08-08)
+5. **macOS menu bar widget**: Native Swift/SwiftUI app showing battery SOC and PV production in the menu bar, with popover for detailed view (battery indicator, power flow, weather, manual refresh)
+6. **API authentication**: Bearer token to protect all endpoints
 
 ### Non-Functional
 
-1. **Reliability**: Backend must run 24/7 on VPS with automatic restart on failure
-2. **Rate limiting safety**: Never poll Growatt API faster than every 5 minutes to avoid account blocking
-3. **Idempotent imports**: Historical data re-import must not create duplicates
-4. **Self-hosted**: All infrastructure on user-controlled VPS, no external SaaS dependencies
-5. **Coordinate accuracy**: Solar calculations must use real installation coordinates, not Growatt's forced city-center values
+1. **Reliability**: Backend must run 24/7 on VPS with automatic restart on failure (systemd)
+2. **Rate limiting safety**: Never poll Growatt API faster than every 5 minutes
+3. **Idempotent imports**: Historical data re-import must not create duplicates (UPSERT)
+4. **Self-hosted**: All infrastructure on user-controlled VPS
+5. **Coordinate accuracy**: Solar calculations must use real installation coordinates
 
 ### Constraints
 
-1. **Growatt API limitation**: Must use Legacy ShinePhone API (reverse-engineered) — OpenAPI V1 only supports MIN/SPH devices, not SPF
+1. **Growatt API**: Must use Legacy ShinePhone API (reverse-engineered) — OpenAPI V1 only supports MIN/SPH devices, not SPF
 2. **Growatt rate limiting**: Aggressive rate limiting since Feb 2023; accounts get blocked for excessive calls
-3. **ShineWIFI-S has no local API**: Cannot read data directly from datalogger; must go through Growatt cloud
-4. **5-minute data resolution**: Datalogger pushes data every 5 minutes by default (configurable to 1 min)
-5. **No grid connection**: System is off-grid; no net metering or grid import/export data
-6. **AGP 9 breaking changes**: Android Gradle Plugin 9.x removed kotlin-android plugin, requires compose-compiler plugin, changed kotlinOptions to kotlin.jvmToolchain
+3. **ShineWIFI-S**: No local API on datalogger; must go through Growatt cloud
+4. **5-minute resolution**: Datalogger pushes data every 5 minutes (configurable to 1 min)
+5. **Off-grid**: No grid import/export; battery is the only storage
+6. **macOS only**: Widget is Swift/SwiftUI, targets macOS 13.0+ (Ventura)
 
 ## Architecture
 
-### System Overview
-
 ```
-Growatt Cloud → (Legacy API, 5min poll) → NestJS Backend (VPS 24/7)
-                                              ↓
-                                         PostgreSQL
-                                              ↓
-                          ┌───────────────────┼───────────────────┐
-                          ↓                   ↓                   ↓
-                    macOS Widget        Android App          Swagger UI
-                    (Swift/MenuBar)    (Kotlin/Compose)      (API Docs)
+┌─────────────────────────────────────────────────┐
+│              NestJS Backend (VPS 24/7)            │
+│                                                   │
+│  ┌──────────┐  ┌──────────┐  ┌───────────────┐  │
+│  │ Growatt  │  │  Solar   │  │   Weather     │  │
+│  │ Poller   │  │ (suncalc)│  │ (Open-Meteo)  │  │
+│  └────┬─────┘  └────┬─────┘  └──────┬────────┘  │
+│       └──────────────┼───────────────┘           │
+│                      ↓                            │
+│               ┌──────────────┐                    │
+│               │  PostgreSQL  │                    │
+│               └──────┬───────┘                    │
+│                      ↓                            │
+│               ┌──────────────┐                    │
+│               │  /api/status │                    │
+│               └──────┬───────┘                    │
+└──────────────────────┼────────────────────────────┘
+                       │ HTTP + Bearer token
+                       ↓
+              ┌─────────────────┐
+              │  macOS Widget   │
+              │  (Swift/SwiftUI)│
+              │  MenuBarExtra   │
+              └─────────────────┘
 ```
 
-### Backend (NestJS 12)
-
-| Module | Responsibility |
-|--------|---------------|
-| `growatt/` | API client (session-based auth), cron poller (5min), historical data fetcher (paginated) |
-| `solar/` | SunCalc wrapper: sunrise/sunset, sun position, daylight hours, daily sun path |
-| `weather/` | Open-Meteo client: current weather, hourly forecast, daily forecast, solar radiation |
-| `readings/` | TypeORM entity, CRUD, UPSERT for idempotent imports |
-| `status/` | Composed endpoint: solar + weather + growatt data in single response |
-| `chat/` | OpenAI-compatible LLM proxy with solar context injection |
-| `auth/` | Bearer token guard (global, configurable via API_TOKEN env) |
-
-### Database Schema
-
-- **readings**: time-series data (recorded_at unique, battery_soc, battery_power, pv_power, load_power, daily_yield)
-- **devices**: inverter + battery metadata
-- **plant_config**: location, panel count, battery capacity
-
-### Key Design Decisions
+## Key Design Decisions
 
 | Decision | Rationale |
 |----------|-----------|
-| Backend owns all Growatt communication | Single source of truth, avoids rate limiting from multiple clients |
-| .env coordinates override API coordinates | Growatt forces city center, not real installation location |
+| Backend owns all Growatt communication | Single source of truth, avoids rate limiting |
+| .env coordinates override API | Growatt forces city center, not real location |
 | UPSERT on recorded_at | Idempotent historical imports |
-| Bearer token auth (not OAuth) | Single user, no third-party access needed |
-| TypeORM 1.x | User's explicit choice for latest features |
-| suncalc for solar position | Zero dependencies, local calculation, no API calls |
-| Open-Meteo for weather | Free, no API key, includes solar radiation data |
+| Bearer token (not OAuth) | Single user, no third-party access |
+| suncalc for solar position | Zero deps, local calculation, no API key |
+| Open-Meteo for weather | Free, no key, includes solar radiation |
+| MenuBarExtra (not NSStatusItem) | Modern SwiftUI, 80% less code |
+| @ObservableObject (not @Observable) | macOS 13 compatibility |
 
 ## Definition of Done
 
 - [x] Backend API running 24/7 on VPS with systemd
-- [x] Growatt polling every 5 minutes with data stored in PostgreSQL
+- [x] Growatt polling every 5 minutes with data in PostgreSQL
 - [x] Historical data import (Aug 8 → today, ~10K readings)
 - [x] Solar position calculations with real coordinates
-- [x] Weather data with solar radiation
-- [x] API token authentication
-- [x] Swagger documentation
+- [x] Weather data with solar radiation (GHI/DNI/DHI)
+- [x] API token authentication + Swagger docs
 - [x] macOS menu bar widget showing real-time data
 - [x] GitHub Actions CI/CD (push → deploy)
 - [x] Verification harness (typecheck + lint + test)
-- [ ] Android app building in Android Studio
-- [ ] AI Chat Agent
-- [ ] Demo video
 
 ## Tech Stack
 
@@ -121,10 +139,8 @@ Growatt Cloud → (Legacy API, 5min poll) → NestJS Backend (VPS 24/7)
 | Scheduling | @nestjs/schedule | 12.0.1 |
 | Solar calc | suncalc | 2.0.2 |
 | Weather | Open-Meteo | REST API |
-| HTTP client | growatt (npm) | 0.7.7 |
+| Growatt client | growatt (npm) | 0.7.7 |
 | Testing | Vitest | 5.0.0 |
 | Linting | ESLint | 10.10.0 |
 | macOS Widget | Swift/SwiftUI | 6.3.3 |
-| Android | Kotlin/Compose | 2.3.21 |
-| Android Widget | Glance | 1.2.0 |
 | CI/CD | GitHub Actions | — |
