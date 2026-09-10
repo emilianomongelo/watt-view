@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1920,height=1080">
+<title>Watt View — How We Built It</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1920px;
+    height: 1080px;
+    background: #0a0a0f;
+    color: #e0e0e0;
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+  }
+
+  .scene {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+    padding: 80px;
+  }
+
+  .scene.active {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  h1 {
+    font-size: 64px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #FFB300, #FF6F00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  h2 {
+    font-size: 42px;
+    font-weight: 700;
+    color: #FFB300;
+    margin-bottom: 30px;
+    text-align: center;
+  }
+
+  h3 {
+    font-size: 28px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 16px;
+  }
+
+  .subtitle {
+    font-size: 28px;
+    font-weight: 300;
+    color: #888;
+    text-align: center;
+  }
+
+  .grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    width: 100%;
+    max-width: 1600px;
+  }
+
+  .card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 32px;
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .card.show {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  .card .icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+
+  .card .title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #FFB300;
+    margin-bottom: 8px;
+  }
+
+  .card .desc {
+    font-size: 16px;
+    color: #999;
+    line-height: 1.5;
+  }
+
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    max-width: 1600px;
+  }
+
+  .flow-step {
+    background: rgba(255,179,0,0.1);
+    border: 2px solid rgba(255,179,0,0.3);
+    border-radius: 12px;
+    padding: 20px 28px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 600;
+    color: #FFB300;
+    opacity: 0;
+    transform: translateX(-20px);
+    transition: all 0.4s ease;
+  }
+
+  .flow-step.show {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .flow-step.error {
+    background: rgba(255,59,48,0.15);
+    border-color: rgba(255,59,48,0.4);
+    color: #FF3B30;
+  }
+
+  .flow-step.success {
+    background: rgba(52,199,89,0.15);
+    border-color: rgba(52,199,89,0.4);
+    color: #34C759;
+  }
+
+  .flow-arrow {
+    font-size: 32px;
+    color: #555;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .flow-arrow.show { opacity: 1; }
+
+  .terminal {
+    background: #1a1a2e;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 24px 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    line-height: 1.8;
+    width: 100%;
+    max-width: 1200px;
+    text-align: left;
+  }
+
+  .terminal .line {
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.3s ease;
+  }
+
+  .terminal .line.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .green { color: #34C759; }
+  .red { color: #FF3B30; }
+  .yellow { color: #FFB300; }
+  .blue { color: #007AFF; }
+  .dim { color: #555; }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+    width: 100%;
+    max-width: 1200px;
+  }
+
+  .stat {
+    text-align: center;
+    opacity: 0;
+    transform: scale(0.9);
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .stat.show {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .stat .number {
+    font-size: 72px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #FFB300, #FF6F00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .stat .label {
+    font-size: 20px;
+    color: #888;
+    margin-top: 8px;
+  }
+
+  .api-response {
+    background: #1a1a2e;
+    border: 1px solid rgba(255,179,0,0.2);
+    border-radius: 12px;
+    padding: 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    line-height: 1.6;
+    width: 100%;
+    max-width: 1400px;
+    text-align: left;
+    white-space: pre;
+  }
+
+  .highlight-bar {
+    display: inline-block;
+    background: rgba(255,179,0,0.2);
+    border-left: 3px solid #FFB300;
+    padding: 2px 8px;
+    margin: 2px 0;
+  }
+
+  .architecture-diagram {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    width: 100%;
+    max-width: 1200px;
+  }
+
+  .arch-row {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .arch-box {
+    background: rgba(255,255,255,0.05);
+    border: 2px solid rgba(255,179,0,0.3);
+    border-radius: 12px;
+    padding: 16px 24px;
+    text-align: center;
+    min-width: 200px;
+    opacity: 0;
+    transform: scale(0.9);
+    transition: all 0.4s ease;
+  }
+
+  .arch-box.show {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .arch-box.primary {
+    background: rgba(255,179,0,0.1);
+    border-color: #FFB300;
+  }
+
+  .arch-box .box-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #FFB300;
+  }
+
+  .arch-box .box-sub {
+    font-size: 13px;
+    color: #888;
+    margin-top: 4px;
+  }
+
+  .arch-arrow {
+    font-size: 24px;
+    color: #FFB300;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .arch-arrow.show { opacity: 1; }
+
+  .arch-arrow.down {
+    transform: rotate(90deg);
+  }
+
+  .section-number {
+    font-size: 120px;
+    font-weight: 900;
+    color: rgba(255,179,0,0.08);
+    position: absolute;
+    top: 40px;
+    right: 80px;
+  }
+</style>
+</head>
+<body>
+
+<!-- SCENE 0: Title -->
+<div class="scene active" id="scene-0">
+  <h1>HOW WE BUILT IT</h1>
+  <p class="subtitle">Agentic Engineering Behind Watt View</p>
+  <div style="margin-top: 40px; display: flex; gap: 40px;">
+    <div class="stat">
+      <div class="number">30+</div>
+      <div class="label">Commits</div>
+    </div>
+    <div class="stat">
+      <div class="number">5</div>
+      <div class="label">Autonomous Loops</div>
+    </div>
+    <div class="stat">
+      <div class="number">4</div>
+      <div class="label">Parallel Agents</div>
+    </div>
+  </div>
+</div>
+
+<!-- SCENE 1: Orchestrator Pattern -->
+<div class="scene" id="scene-1">
+  <span class="section-number">01</span>
+  <h2>Orchestrator Pattern</h2>
+  <div class="architecture-diagram">
+    <div class="arch-row">
+      <div class="arch-box primary">
+        <div class="box-title">🧠 Orchestrator</div>
+        <div class="box-sub">Plans · Delegates · Synthesizes</div>
+      </div>
+    </div>
+    <div class="arch-arrow down">↓</div>
+    <div class="arch-row">
+      <div class="arch-box"><div class="box-title">🔬 Researcher</div><div class="box-sub">API docs · Libraries</div></div>
+      <div class="arch-box"><div class="box-title">⚙️ Engineer</div><div class="box-sub">Code · Tests · Build</div></div>
+      <div class="arch-box"><div class="box-title">🌐 General</div><div class="box-sub">Multi-step · Verify</div></div>
+    </div>
+    <div class="arch-arrow down">↓</div>
+    <div class="arch-row">
+      <div class="arch-box primary">
+        <div class="box-title">✅ Verification</div>
+        <div class="box-sub">typecheck · lint · test · deploy</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCENE 2: Parallel Research -->
+<div class="scene" id="scene-2">
+  <span class="section-number">02</span>
+  <h2>4 Parallel Research Agents</h2>
+  <div class="grid-4">
+    <div class="card">
+      <div class="icon">🔌</div>
+      <div class="title">Growatt API</div>
+      <div class="desc">Legacy vs V1. V1 doesn't support SPF. Must use reverse-engineered ShinePhone API.</div>
+    </div>
+    <div class="card">
+      <div class="icon">🏠</div>
+      <div class="title">Google Home</div>
+      <div class="desc">Conversational Actions deprecated June 2023. Decision: skip entirely.</div>
+    </div>
+    <div class="card">
+      <div class="icon">🖥️</div>
+      <div class="title">macOS Widget</div>
+      <div class="desc">MenuBarExtra (macOS 13+). 80% less code than NSStatusItem. SwiftUI native.</div>
+    </div>
+    <div class="card">
+      <div class="icon">📡</div>
+      <div class="title">ShineWIFI-S</div>
+      <div class="desc">No local API. Datalogger is a dumb relay. Must go through Growatt cloud.</div>
+    </div>
+  </div>
+  <p class="subtitle" style="margin-top: 32px;">All 4 ran concurrently · 60s wall-clock vs 4min sequential</p>
+</div>
+
+<!-- SCENE 3: Architecture -->
+<div class="scene" id="scene-3">
+  <span class="section-number">03</span>
+  <h2>System Architecture</h2>
+  <div class="architecture-diagram">
+    <div class="arch-row">
+      <div class="arch-box"><div class="box-title">☁️ Growatt Cloud</div><div class="box-sub">Legacy API · 5min poll</div></div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box primary"><div class="box-title">🖥️ NestJS Backend</div><div class="box-sub">VPS 24/7 · PostgreSQL</div></div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box"><div class="box-title">📊 /api/status</div><div class="box-sub">Solar + Weather + Inverter</div></div>
+    </div>
+    <div class="arch-arrow down">↓</div>
+    <div class="arch-row">
+      <div class="arch-box primary"><div class="box-title">🖥️ macOS Widget</div><div class="box-sub">Swift · MenuBarExtra · 5min refresh</div></div>
+    </div>
+  </div>
+  <div style="margin-top: 40px; display: flex; gap: 60px; justify-content: center;">
+    <div style="text-align: center;"><span style="font-size: 36px; font-weight: 700; color: #FFB300;">7</span><br><span style="color: #888;">Modules</span></div>
+    <div style="text-align: center;"><span style="font-size: 36px; font-weight: 700; color: #FFB300;">9</span><br><span style="color: #888;">API Endpoints</span></div>
+    <div style="text-align: center;"><span style="font-size: 36px; font-weight: 700; color: #FFB300;">23/23</span><br><span style="color: #888;">Tests Passing</span></div>
+    <div style="text-align: center;"><span style="font-size: 36px; font-weight: 700; color: #FFB300;">10K+</span><br><span style="color: #888;">Readings Imported</span></div>
+  </div>
+</div>
+
+<!-- SCENE 4: Autonomous Loop -->
+<div class="scene" id="scene-4">
+  <span class="section-number">04</span>
+  <h2>Autonomous Loop: ACT → VERIFY → FIX → VERIFY</h2>
+  <p class="subtitle" style="margin-bottom: 32px;">5 loops documented · No human prompt between steps</p>
+  <div class="flow" id="loop-flow">
+    <div class="flow-step">ACT<br><span style="font-size: 14px; font-weight: 400;">import Growatt<br>from 'growatt'</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">VERIFY<br><span style="font-size: 14px; font-weight: 400;">deploy to VPS</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step error">OBSERVE<br><span style="font-size: 14px; font-weight: 400;">not a constructor</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">FIX<br><span style="font-size: 14px; font-weight: 400;">esModuleInterop</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step success">VERIFY<br><span style="font-size: 14px; font-weight: 400;">200 OK ✓</span></div>
+  </div>
+  <div class="terminal" style="margin-top: 32px;">
+    <div class="line"><span class="dim">$</span> <span class="yellow">git log --oneline</span></div>
+    <div class="line"><span class="green">60d1bdc</span> fix: add esModuleInterop to fix CJS growatt import at runtime</div>
+    <div class="line"><span class="green">24629f0</span> fix: resolve circular dependency between GrowattModule and ReadingsModule</div>
+    <div class="line"><span class="green">0ba37bc</span> fix(readings): TypeORM 1.x findOne requires where clause</div>
+    <div class="line"><span class="green">1a0b751</span> fix(macos): add default API token fallback in SolarAPIClient</div>
+    <div class="line"><span class="green">2a9bd2f</span> fix(macos): invert battery charge/discharge sign convention</div>
+  </div>
+</div>
+
+<!-- SCENE 5: Verification Harness -->
+<div class="scene" id="scene-5">
+  <span class="section-number">05</span>
+  <h2>Verification Harness</h2>
+  <div class="terminal" style="max-width: 1000px;">
+    <div class="line"><span class="dim">$</span> <span class="yellow">npm run check</span></div>
+    <div class="line"><span class="dim">> watt-view-api@0.1.0 check</span></div>
+    <div class="line"><span class="dim">> tsc -b --noEmit</span> <span class="green">✓ typecheck passed</span></div>
+    <div class="line"><span class="dim">> eslint .</span> <span class="green">✓ lint passed</span></div>
+    <div class="line"><span class="dim">> vitest run</span></div>
+    <div class="line"><span class="green">  ✓ src/solar/solar.service.test.ts (5 tests)</span></div>
+    <div class="line"><span class="green">  ✓ src/auth/auth.guard.test.ts (6 tests)</span></div>
+    <div class="line"><span class="green">  ✓ src/growatt/growatt.service.test.ts (5 tests)</span></div>
+    <div class="line"><span class="green">  ✓ src/status/status.service.test.ts (1 test)</span></div>
+    <div class="line"><span class="green">  Test Files  4 passed (4)</span></div>
+    <div class="line"><span class="green">  Tests       23 passed (23)</span></div>
+  </div>
+  <div style="margin-top: 32px; display: flex; gap: 40px; font-size: 20px;">
+    <div>🔒 <span class="yellow">Every commit</span> must pass <code style="color: #FFB300;">npm run check</code></div>
+    <div>🚀 <span class="yellow">GitHub Actions</span> auto-deploys on push to main</div>
+    <div>📊 <span class="yellow">verify-live.mjs</span> tests real endpoints</div>
+  </div>
+</div>
+
+<!-- SCENE 6: Real Data -->
+<div class="scene" id="scene-6">
+  <span class="section-number">06</span>
+  <h2>Real Hardware · Real Data</h2>
+  <div class="api-response" id="api-data">{
+  <span class="yellow">"timestamp"</span>: "2026-09-09T17:59:17Z",
+  <span class="yellow">"solar"</span>: {
+    <span class="yellow">"latitude"</span>: <span class="blue">-34.556960</span>,
+    <span class="yellow">"longitude"</span>: <span class="blue">-68.307736</span>,
+    <span class="yellow">"daylightHours"</span>: <span class="blue">11.66</span>,
+    <span class="yellow">"sunrise"</span>: "2026-09-09T10:40:57Z",
+    <span class="yellow">"sunset"</span>: "2026-09-09T22:20:34Z"
+  },
+  <span class="yellow">"growatt"</span>: {
+    <span class="yellow">"status"</span>: "<span class="green">connected</span>",
+    <span class="yellow">"inverterData"</span>: {
+      <span class="yellow">"deviceModel"</span>: "<span class="yellow">SPF 5000 ES</span>",
+      <span class="yellow">"batterySoc"</span>: <span class="green">90</span>,          <span class="dim">// ← real battery level</span>
+      <span class="yellow">"pvPower"</span>: <span class="green">1695</span>,            <span class="dim">// ← watts from 6 panels</span>
+      <span class="yellow">"loadPower"</span>: <span class="blue">194</span>,           <span class="dim">// ← house consumption</span>
+      <span class="yellow">"batteryPower"</span>: <span class="red">-1479</span>,      <span class="dim">// ← charging (negative)</span>
+      <span class="yellow">"dailyYield"</span>: <span class="green">8.3</span>            <span class="dim">// ← kWh today</span>
+    }
+  }
+}</div>
+</div>
+
+<!-- SCENE 7: Closing -->
+<div class="scene" id="scene-7">
+  <h1 style="font-size: 80px;">WATT VIEW</h1>
+  <p class="subtitle" style="font-size: 32px; margin-top: 16px;">Native macOS Menu Bar Widget for Solar Monitoring</p>
+  <div style="margin-top: 60px; display: flex; gap: 60px;">
+    <div class="stat"><div class="number">1</div><div class="label">Orchestrator</div></div>
+    <div class="stat"><div class="number">5</div><div class="label">Subagent Types</div></div>
+    <div class="stat"><div class="number">30+</div><div class="label">Commits</div></div>
+    <div class="stat"><div class="number">100%</div><div class="label">Agent-Driven</div></div>
+  </div>
+  <p class="subtitle" style="margin-top: 60px; font-size: 22px;">github.com/emilianomongelo/watt-view</p>
+</div>
+
+<script>
+const scenes = document.querySelectorAll('.scene');
+const timings = [
+  { id: 'scene-0', duration: 4000 },
+  { id: 'scene-1', duration: 10000 },
+  { id: 'scene-2', duration: 10000 },
+  { id: 'scene-3', duration: 10000 },
+  { id: 'scene-4', duration: 18000 },
+  { id: 'scene-5', duration: 12000 },
+  { id: 'scene-6', duration: 12000 },
+  { id: 'scene-7', duration: 6000 },
+];
+
+let currentScene = 0;
+
+function activateScene(index) {
+  scenes.forEach(s => s.classList.remove('active'));
+  const scene = document.getElementById(timings[index].id);
+  scene.classList.add('active');
+
+  // Stagger child animations
+  const cards = scene.querySelectorAll('.card');
+  cards.forEach((c, i) => setTimeout(() => c.classList.add('show'), 300 + i * 200));
+
+  const steps = scene.querySelectorAll('.flow-step, .flow-arrow');
+  steps.forEach((s, i) => setTimeout(() => s.classList.add('show'), 200 + i * 300));
+
+  const lines = scene.querySelectorAll('.terminal .line');
+  lines.forEach((l, i) => setTimeout(() => l.classList.add('show'), 200 + i * 200));
+
+  const boxes = scene.querySelectorAll('.arch-box, .arch-arrow');
+  boxes.forEach((b, i) => setTimeout(() => b.classList.add('show'), 300 + i * 250));
+
+  const stats = scene.querySelectorAll('.stat');
+  stats.forEach((s, i) => setTimeout(() => s.classList.add('show'), 400 + i * 300));
+}
+
+function nextScene() {
+  currentScene++;
+  if (currentScene < timings.length) {
+    activateScene(currentScene);
+    setTimeout(nextScene, timings[currentScene].duration);
+  }
+}
+
+// Start
+activateScene(0);
+setTimeout(nextScene, timings[0].duration);
+</script>
+</body>
+</html>
