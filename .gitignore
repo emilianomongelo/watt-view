@@ -5,6 +5,10 @@ node_modules/
 api/dist/
 macos/.build/
 macos/GrowattPlusMenuBar.app/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
 
 # Environment
 .env
