@@ -4,9 +4,50 @@
 
 **Date**: September 8-10, 2026
 **Duration**: ~6 hours across 2 sessions
-**Tool**: MiMoCode (orchestrator + specialized subagents)
+**Platform**: MiMoCode — orchestrated agent system with specialized subagents
 **Product**: Native macOS menu bar widget for solar energy monitoring
 **Commits**: 30+
+
+### Tools & Infrastructure
+
+| Tool | Role |
+|------|------|
+| **MiMoCode Orchestrator** | Plans, delegates, synthesizes, makes architectural decisions |
+| **Researcher subagents** (7×) | External web research, API docs, library comparison |
+| **Engineer subagents** (4×) | Code implementation, build verification, test writing |
+| **General subagents** (2×) | Multi-step autonomous work |
+| **SCE Memory (Graphiti)** | Cross-session knowledge graph for decisions, field mappings, conventions |
+| **SCE Semantic Search (LightRAG)** | Semantic code search by concept, not file path |
+| **Session Checkpoint** | Persistent session state with directives, error log, task tree |
+| **html-to-video-pipeline** | Animated HTML → MP4 demo video (Playwright + ffmpeg) |
+
+### Memory-Driven Development
+
+The SCE knowledge graph preserved critical decisions across sessions:
+
+**Example — SPF 5000 ES field mapping saved to Graphiti:**
+```
+Saved: "capacity=batterySoc, ppv1=pvPower, batPower=negative means charging"
+Later retrieved when implementing macOS widget BatteryIndicator
+Result: Correct sign convention from the start (no debugging needed)
+```
+
+**Example — AGP 9 breaking changes saved to Graphiti:**
+```
+Saved: "kotlin-android is BUILT-IN in AGP 9, remove it.
+        compose-compiler is STILL REQUIRED. kotlinOptions removed,
+        use android.kotlin { jvmToolchain(N) }."
+Later retrieved when Android build failed 3 times in a row
+Result: Each fix applied from memory, not from re-research
+```
+
+**Example — semantic code search for poller behavior:**
+```
+Query: "how does the growatt poller save readings to database"
+Results: growatt.poller.ts (0.51), ARCHITECTURE.md (0.50),
+         growatt.module.ts (0.49), readings.controller.ts (0.41)
+Use: Understanding module wiring before making changes
+```
 
 ---
 

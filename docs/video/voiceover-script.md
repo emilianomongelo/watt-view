@@ -52,9 +52,11 @@
 
 ### [1:30 - 1:42] Orchestrator Pattern
 
-> I used an orchestrator pattern with specialized sub-agents. The orchestrator plans, delegates, and synthesizes. Each sub-agent gets a self-contained prompt with clear objectives and verification criteria.
+> I used an orchestrator pattern with specialized sub-agents on the MiMoCode platform. The orchestrator plans, delegates, and synthesizes. Each sub-agent gets a self-contained prompt with clear objectives and verification criteria.
 >
 > Three agent types: Researchers for external investigation, Engineers for implementation, and General-purpose agents for complex multi-step tasks.
+>
+> A Graphiti knowledge graph preserves decisions across sessions — field mappings, platform constraints, sign conventions. Semantic code search lets the orchestrator find relevant code by concept, not file path.
 
 ### [1:42 - 1:56] Parallel Research
 

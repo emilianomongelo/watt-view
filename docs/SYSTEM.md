@@ -183,6 +183,75 @@ No human prompt between OBSERVE and FIX.
 | UPSERT on recorded_at | Idempotent imports |
 | systemd `Restart=always` | Backend auto-recovery |
 
+## Memory & Knowledge Systems
+
+Watt View uses the **SCE (Smart Context Engine)** — a multi-backend memory and code intelligence system — for cross-session knowledge retention and semantic code search.
+
+### SCE Memory (Graphiti backend)
+
+The orchestrator saves architectural decisions, field mappings, and platform discoveries to a **Graphiti knowledge graph**. On subsequent sessions, the orchestrator queries this graph to retrieve prior context without re-deriving it.
+
+**Concrete example — SPF 5000 ES field mapping preservation:**
+
+```
+Session 1 (research):
+  → Dump script reveals: statusData.capacity = Battery SOC
+  → Orchestrator saves to Graphiti: "capacity=batterySoc, ppv1=pvPower,
+    batPower=negative means charging"
+
+Session 2 (widget implementation):
+  → Orchestrator queries Graphiti for "growatt field mapping"
+  → Retrieves: "negative = charging, positive = discharging"
+  → Passes to subagent prompt: "Battery power convention:
+    negative=charging, positive=discharging"
+  → Subagent implements BatteryIndicator with correct sign logic
+```
+
+Without this memory, the sign-convention bug would have required a manual debugging session. The knowledge graph made the correction automatic.
+
+### Semantic Code Search (LightRAG backend)
+
+When investigating codebase behavior without reading every file, the orchestrator uses semantic search over indexed code chunks:
+
+```
+Query: "how does the growatt poller save readings to database"
+
+Results (ranked by semantic relevance):
+  1. growatt.poller.ts (score 0.512) — @Cron handler calling
+     growattService.getPlantData() then readingsService.create()
+  2. ARCHITECTURE.md (score 0.502) — Mermaid sequence diagram
+     showing Cron → GrowattService → API → ReadingService → DB
+  3. growatt.module.ts (score 0.486) — Module wiring with
+     forwardRef() for circular dependency
+  4. readings.controller.ts (score 0.410) — REST endpoints
+     with UPSERT import logic
+```
+
+This is used for: investigating unexpected behavior, understanding module wiring before making changes, and verifying that implementations match the architecture.
+
+### Session Memory (checkpoint system)
+
+MiMoCode maintains a **session checkpoint** that preserves:
+- Active intent and next concrete action
+- All directives (API version, rate limits, coordinate priority, etc.)
+- Task tree with completion status
+- All discovered knowledge (field mappings, AGP 9 breaking changes, etc.)
+- Error log with fixes and commit hashes
+
+The checkpoint is written automatically and read at session start, enabling context restoration after compaction or restart.
+
+### Tools Used
+
+| Tool | Backend | Purpose | Frequency |
+|------|---------|---------|-----------|
+| `sce_memory_save` | Graphiti | Persist decisions, mappings, conventions | Every significant discovery |
+| `sce_memory_search` | Graphiti | Cross-session knowledge retrieval | Session start, after compaction |
+| `sce_search_codebase` | LightRAG | Semantic code search by concept | When investigating codebase |
+| `sce_code_architecture` | code-review-graph | Architecture communities | Available, not yet indexed |
+| `sce_code_impact` | code-review-graph | Blast radius analysis | Available, not yet indexed |
+| `memory search` | Session checkpoint | BM25 search over session notes | Context restoration |
+| `memory read` | Session checkpoint | Full checkpoint read | Session start |
+
 ## Human Decisions
 
 | Decision | Impact |
