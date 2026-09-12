@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
 APP_NAME="GrowattPlusMenuBar"
-APP_DIR="${APP_NAME}.app"
+APP_DIR="WattView.app"
 
 echo "==> Building ${APP_NAME} with Swift…"
 swift build -c release 2>&1
@@ -25,5 +25,5 @@ codesign --force --sign - "${APP_DIR}" 2>/dev/null || true
 
 echo ""
 echo "==> Done! Built: ${APP_DIR}"
-echo "    Run:   open ${APP_DIR}"
-echo "    Or:    ./${APP_DIR}/Contents/MacOS/${APP_NAME}"
+echo "    Run:   open '${APP_DIR}'"
+echo "    Or:    ./'${APP_DIR}'/Contents/MacOS/${APP_NAME}"

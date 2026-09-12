@@ -6,6 +6,8 @@
     <string>Watt View</string>
     <key>CFBundleDisplayName</key>
     <string>Watt View</string>
+    <key>CFBundleExecutable</key>
+    <string>GrowattPlusMenuBar</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
