@@ -3,9 +3,11 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>Growatt Plus</string>
+    <string>Watt View</string>
     <key>CFBundleDisplayName</key>
-    <string>Growatt Plus</string>
+    <string>Watt View</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>com.growattplus.menubar</string>
     <key>CFBundleVersion</key>

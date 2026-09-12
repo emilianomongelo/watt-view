@@ -17,6 +17,7 @@ mkdir -p "${APP_DIR}/Contents/Resources"
 
 cp ".build/release/${APP_NAME}" "${APP_DIR}/Contents/MacOS/"
 cp "Sources/GrowattPlusMenuBar/App/Info.plist" "${APP_DIR}/Contents/"
+cp "Sources/GrowattPlusMenuBar/App/AppIcon.icns" "${APP_DIR}/Contents/Resources/" 2>/dev/null || true
 echo -n 'APPL????' > "${APP_DIR}/Contents/PkgInfo"
 
 # Ad-hoc sign so macOS trusts it
