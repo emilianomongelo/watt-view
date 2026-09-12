@@ -2,6 +2,27 @@
 
 A native macOS menu bar widget that monitors a Growatt off-grid solar installation in real time. Battery status, solar production, consumption, and weather — always visible, always updating.
 
+## Quick Start (for judges)
+
+Download the pre-built app from [Releases](https://github.com/emilianomongelo/watt-view/releases/tag/v0.1.0):
+
+```bash
+# 1. Download WattView.zip from the Release page
+# 2. Install
+unzip WattView.zip
+xattr -cr WattView.app
+mv WattView.app /Applications/
+
+# 3. Launch
+open /Applications/WattView.app
+```
+
+The widget connects to a live demo API (`http://209.46.125.190`) with a pre-configured token. No setup needed — you'll see real solar data from a Growatt SPF 5000 ES inverter in Mendoza, Argentina.
+
+**Requirements**: macOS 13.0+ (Ventura), network access to the demo API.
+
+**What you'll see**: Battery SOC, solar production, house consumption, weather conditions, and 10K+ historical readings. The data updates every 5 minutes from a real off-grid installation.
+
 ## What It Does
 
 Watt View replaces the unreliable ShinePhone app with a system you control:

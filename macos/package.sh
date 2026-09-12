@@ -7,12 +7,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
-APP_NAME="GrowattPlusMenuBar"
-APP_DIR="${APP_NAME}.app"
-ZIP_NAME="${APP_NAME}.zip"
+BIN_NAME="GrowattPlusMenuBar"
+APP_DIR="WattView.app"
+ZIP_NAME="WattView.zip"
 VERSION="0.1.0"
 
-echo "==> Building ${APP_NAME} v${VERSION} (release)..."
+echo "==> Building Watt View v${VERSION} (release)..."
 swift build -c release 2>&1
 
 echo "==> Creating .app bundle..."
@@ -20,8 +20,9 @@ rm -rf "${APP_DIR}"
 mkdir -p "${APP_DIR}/Contents/MacOS"
 mkdir -p "${APP_DIR}/Contents/Resources"
 
-cp ".build/release/${APP_NAME}" "${APP_DIR}/Contents/MacOS/"
+cp ".build/release/${BIN_NAME}" "${APP_DIR}/Contents/MacOS/"
 cp "Sources/GrowattPlusMenuBar/App/Info.plist" "${APP_DIR}/Contents/"
+cp "Sources/GrowattPlusMenuBar/App/AppIcon.icns" "${APP_DIR}/Contents/Resources/" 2>/dev/null || true
 echo -n 'APPL????' > "${APP_DIR}/Contents/PkgInfo"
 
 # Ad-hoc sign
@@ -41,9 +42,7 @@ echo "    Zip:   ${ZIP_NAME} (${ZIP_SIZE})"
 echo ""
 echo "    To install on another Mac:"
 echo "    1. Copy ${ZIP_NAME} to the target Mac"
-echo "    2. Unzip: unzip ${ZIP_NAME}"
-echo "    3. Remove quarantine: xattr -cr ${APP_DIR}"
-echo "    4. Move to Applications: mv ${APP_DIR} /Applications/"
-echo "    5. Open: open /Applications/${APP_DIR}"
-echo ""
-echo "    Or run the install script: ./install.sh"
+echo "    2. unzip ${ZIP_NAME}"
+echo "    3. xattr -cr ${APP_DIR}"
+echo "    4. mv ${APP_DIR} /Applications/"
+echo "    5. open /Applications/${APP_DIR}"
