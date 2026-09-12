@@ -3,7 +3,6 @@ import SwiftUI
 /// Visual battery representation with SOC percentage, icon, and color coding.
 struct BatteryIndicator: View {
     let soc: Double
-    let power: Double
 
     /// SF Symbol name that maps to the current SOC range.
     private var batteryIcon: String {
@@ -23,18 +22,6 @@ struct BatteryIndicator: View {
         case ..<50: return .orange
         default:    return .green
         }
-    }
-
-    /// Charge / discharge indicator text.
-    /// Growatt convention: negative = charging (energy into battery),
-    ///                      positive = discharging (energy out of battery).
-    private var powerLabel: String {
-        if power < 0 {
-            return String(format: "%.0f W charging", abs(power))
-        } else if power > 0 {
-            return String(format: "%.0f W discharging", power)
-        }
-        return "idle"
     }
 
     var body: some View {
@@ -63,10 +50,6 @@ struct BatteryIndicator: View {
                 }
             }
             .frame(width: 90, height: 90)
-
-            Text(powerLabel)
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
     }
 }

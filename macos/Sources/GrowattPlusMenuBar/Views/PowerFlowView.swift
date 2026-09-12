@@ -4,23 +4,19 @@ import SwiftUI
 struct PowerFlowView: View {
     let production: Double
     let consumption: Double
+    let batteryPower: Double
     let dailyYield: Double?
-
-    /// Net power: positive = surplus, negative = deficit.
-    private var netPower: Double {
-        production - consumption
-    }
 
     var body: some View {
         VStack(spacing: 12) {
             HStack(spacing: 24) {
                 // Production
                 VStack(spacing: 4) {
-                    Image(systemName: "arrow.up.circle.fill")
+                    Image(systemName: "sun.max.fill")
                         .font(.title2)
-                        .foregroundStyle(.green)
+                        .foregroundStyle(.yellow)
 
-                    Text("Production")
+                    Text("Solar")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
@@ -34,11 +30,11 @@ struct PowerFlowView: View {
 
                 // Consumption
                 VStack(spacing: 4) {
-                    Image(systemName: "arrow.down.circle.fill")
+                    Image(systemName: "bolt.fill")
                         .font(.title2)
                         .foregroundStyle(.orange)
 
-                    Text("Consumption")
+                    Text("Load")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
@@ -47,25 +43,46 @@ struct PowerFlowView: View {
                         .monospacedDigit()
                 }
                 .frame(maxWidth: .infinity)
+
+                Divider()
+
+                // Net (production - consumption)
+                VStack(spacing: 4) {
+                    Image(systemName: production >= consumption ? "arrow.up.circle.fill" : "arrow.down.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(production >= consumption ? .green : .red)
+
+                    Text("Net")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Text(String(format: "%@%.2f kW",
+                                production >= consumption ? "+" : "",
+                                production - consumption))
+                        .font(.system(.body, design: .rounded, weight: .semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(production >= consumption ? .green : .red)
+                }
+                .frame(maxWidth: .infinity)
             }
 
-            // Net power bar
+            // Battery power bar
             HStack {
-                Image(systemName: netPower >= 0 ? "bolt.fill" : "bolt")
-                    .foregroundStyle(netPower >= 0 ? .green : .red)
+                Image(systemName: batteryPower < 0 ? "arrow.down.circle.fill" : "arrow.up.circle.fill")
+                    .foregroundStyle(batteryPower < 0 ? .green : .yellow)
 
-                Text(netPower >= 0
-                     ? String(format: "+%.2f kW surplus", netPower)
-                     : String(format: "%.2f kW deficit", netPower))
+                Text(batteryPower < 0
+                     ? String(format: "Charging battery at %.0f W", abs(batteryPower))
+                     : String(format: "Discharging battery at %.0f W", batteryPower))
                     .font(.caption.weight(.medium))
                     .monospacedDigit()
-                    .foregroundStyle(netPower >= 0 ? .green : .red)
+                    .foregroundStyle(batteryPower < 0 ? .green : .yellow)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .background(
                 RoundedRectangle(cornerRadius: 6)
-                    .fill((netPower >= 0 ? Color.green : Color.red).opacity(0.1))
+                    .fill((batteryPower < 0 ? Color.green : Color.yellow).opacity(0.1))
             )
 
             // Daily yield

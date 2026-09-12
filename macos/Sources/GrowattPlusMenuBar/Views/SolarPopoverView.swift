@@ -18,7 +18,7 @@ struct SolarPopoverView: View {
                 errorView(error)
             } else {
                 // Battery
-                BatteryIndicator(soc: model.batterySOC, power: model.batteryPower)
+                BatteryIndicator(soc: model.batterySOC)
 
                 Divider()
 
@@ -26,6 +26,7 @@ struct SolarPopoverView: View {
                 PowerFlowView(
                     production: model.production,
                     consumption: model.consumption,
+                    batteryPower: model.batteryPower,
                     dailyYield: model.dailyYield
                 )
 

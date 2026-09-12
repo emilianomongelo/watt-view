@@ -3,6 +3,9 @@ import Foundation
 extension Date {
     /// Human-friendly relative string: "just now", "2 min ago", "1 hr ago".
     var relativeString: String {
+        let diff = Date().timeIntervalSince(self)
+        if diff < 1 { return "just now" }
+        if diff < 60 { return "\(Int(diff))s ago" }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: self, relativeTo: Date())
