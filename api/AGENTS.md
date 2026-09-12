@@ -82,3 +82,38 @@ Push to `main` triggers GitHub Actions → SSH to VPS → git pull → npm ci �
 - **Service**: `watt-view.service` (systemd)
 - **Env file**: `/etc/watt-view/api.env` (managed manually on VPS)
 - **nginx**: reverse proxy on port 3000
+
+## macOS Widget Deployment Protocol
+
+After ANY change to the macOS widget code, ALWAYS follow this loop:
+
+```bash
+# 1. Kill running instance
+pkill -9 -f GrowattPlusMenuBar 2>/dev/null
+
+# 2. Build
+cd macos && bash build.sh
+
+# 3. Remove quarantine + install to /Applications
+xattr -cr GrowattPlusMenuBar.app
+rm -rf /Applications/GrowattPlusMenuBar.app
+mv GrowattPlusMenuBar.app /Applications/
+
+# 4. Register with LaunchServices + reset Launchpad
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f /Applications/GrowattPlusMenuBar.app
+defaults write com.apple.dock ResetLaunchPad -bool true
+killall Dock
+
+# 5. Launch
+open /Applications/GrowattPlusMenuBar.app
+
+# 6. Verify
+sleep 5 && pgrep -f GrowattPlusMenuBar && echo "Widget running"
+ssh reflex "sudo tail -1 /var/log/nginx/access.log"  # should show GET /api/status → 200
+```
+
+**Critical notes:**
+- `LSUIElement` must be `false` in Info.plist for the app to appear in Launchpad. `true` = menu-bar-only agent (hidden from Launchpad/Dock).
+- Always `xattr -cr` after moving to /Applications (removes Gatekeeper quarantine).
+- The `lsregister` + `ResetLaunchPad` + `killall Dock` sequence forces Launchpad to re-index.
+- If widget shows "Connection Error", check: API token default in SolarAPIClient, ATS settings in Info.plist, port 80 nginx proxy.
