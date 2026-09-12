@@ -17,7 +17,7 @@
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
-    <true/>
+    <false/>
     <key>NSLocalNetworkUsageDescription</key>
     <string>Growatt Plus needs to access your solar monitoring backend.</string>
     <key>NSAppTransportSecurity</key>
