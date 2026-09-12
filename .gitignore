@@ -34,3 +34,4 @@ coverage/
 .mimocode/package-lock.json
 .mimocode/bun.lock
 .mimocode/node_modules/
+docs/video/
