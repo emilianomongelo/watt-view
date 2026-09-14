@@ -5,7 +5,7 @@ struct SettingsView: View {
     @EnvironmentObject private var model: SolarDataModel
 
     @AppStorage("apiBaseURL") private var apiBaseURL = "http://209.46.125.190/api/status"
-    @AppStorage("apiToken") private var apiToken = "73f42ef8-263b-4fee-9c1e-a55208639f3e"
+    @AppStorage("apiToken") private var apiToken = ""
     @AppStorage("refreshInterval") private var refreshIntervalSeconds: Double = 300
 
     @State private var testResult: TestResult?

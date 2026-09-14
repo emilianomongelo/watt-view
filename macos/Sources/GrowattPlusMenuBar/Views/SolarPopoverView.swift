@@ -59,18 +59,6 @@ struct SolarPopoverView: View {
 
             Spacer()
 
-            // Settings gear
-            Button {
-                showingSettings = true
-                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-            } label: {
-                Image(systemName: "gear")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-            .help("Settings")
-
             // Quit
             Button {
                 NSApplication.shared.terminate(nil)
